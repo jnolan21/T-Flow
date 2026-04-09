@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Generated outputs
+sootOutput/
+outputs/
+
+# FlowDroid binary
+FlowDroid-2.15.1/
+
+# Virtual environments
+venv/
+.env
