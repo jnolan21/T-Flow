@@ -165,7 +165,7 @@ def is_meaningful_node(stmt: str) -> bool:
     # Skip compiler-generated accessor methods and very short generic statements
     s = stmt.strip()
 
-    # 1. Remove lifecycle + builder noise
+    # 1) Remove lifecycle + builder noise
     noise_patterns = [
         "access$",
         "dummyMain",
@@ -181,7 +181,7 @@ def is_meaningful_node(stmt: str) -> bool:
     if any(p in s for p in noise_patterns):
         return False
 
-    # 2. Keep only real data movement
+    # 2) Keep only real data movement
     if "getLatitude" in s or "getLongitude" in s:
         return True
 
