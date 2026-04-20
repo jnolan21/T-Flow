@@ -25,7 +25,7 @@
         </Fields>
        </AccessPath>
       </PathElement>
-      <PathElement Statement="return" Method="&lt;de.ecspride.LocationLeak1: void access$1(de.ecspride.LocationLeak1,java.lang.String)&gt;">
+      <PathElement Statement="$u0 := @parameter0: de.ecspride.LocationLeak1" Method="&lt;de.ecspride.LocationLeak1: void access$1(de.ecspride.LocationLeak1,java.lang.String)&gt;">
        <AccessPath Value="$u4" Type="de.ecspride.LocationLeak1" TaintSubFields="true">
         <Fields>
          <Field Value="&lt;de.ecspride.LocationLeak1: java.lang.String longtitude&gt;" Type="java.lang.String"/>

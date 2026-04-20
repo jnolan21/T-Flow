@@ -19,20 +19,13 @@ def build_graph(parsed_data):
     """
     G = nx.DiGraph()
     seen_edges = set()
-    intermediate_count = 0
-    id_map = {}  # Map original IDs to short IDs
 
     # Add nodes
+    id_map = {}
     for node in parsed_data["nodes"]:
         orig_id = node["id"]
-        node_type = node.get("type", "intermediate")
-        if node_type == "intermediate":
-            intermediate_count += 1
-            short_id = f"i{intermediate_count}"
-            id_map[orig_id] = short_id
-        else:
-            short_id = orig_id
-            id_map[orig_id] = short_id
+        short_id = orig_id
+        id_map[orig_id] = short_id
 
         G.add_node(short_id, **node)
 
@@ -41,11 +34,11 @@ def build_graph(parsed_data):
         u_orig = edge["from"]
         v_orig = edge["to"]
 
-        if u_orig not in id_map or v_orig not in id_map:
-            continue
+        u = id_map.get(u_orig)
+        v = id_map.get(v_orig)
 
-        u = id_map[u_orig]
-        v = id_map[v_orig]
+        if not u or not v:
+            continue
 
         if u != v and (u, v) not in seen_edges:
             G.add_edge(u, v)

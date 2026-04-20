@@ -15,3 +15,6 @@ FlowDroid-2.15.1/
 # Virtual environments
 venv/
 .env
+
+data/
+outputs/graphs

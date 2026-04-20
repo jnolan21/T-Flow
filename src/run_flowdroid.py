@@ -46,9 +46,17 @@ def run_flowdroid(apk_name: str):
         str(output_file),
         "-ol",
         "-on",
-        "-cp",
         "-pr",
         "PRECISE",
+        "ps",
+        "-aa",
+        "FLOWSENSITIVE",
+        "-cg",
+        "SPARK",
+        "-ca",
+        "DEFAULT",
+        "-al",
+        "5"
     ]
 
     print("Running FlowDroid...")
