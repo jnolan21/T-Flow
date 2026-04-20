@@ -50,7 +50,7 @@ html.Div([
                 "directed": True,
                 "orientation": "horizontal",
                 "spacingFactor": 1.8,
-                "padding": 80,
+                "padding": 10,
                 "roots": '[type = "source"]',
                 "animate": False
             },
