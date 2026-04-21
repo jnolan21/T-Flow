@@ -74,14 +74,17 @@ if __name__ == "__main__":
         print("Usage: python3 graph_builder.py <XML_NAME>")
         sys.exit(1)
 
-    # Get the XML input file and JSON output file paths
-    xml_name = sys.argv[1]
-    xml_file = os.path.join(os.path.dirname(__file__), "..", "..", "data", "xml_results", f"{xml_name}.xml")
-    output_file = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "graphs", f"{xml_name}_graph.json")
+    try:
+        # Get the XML input file and JSON output file paths
+        xml_name = sys.argv[1]
+        xml_file = os.path.join(os.path.dirname(__file__), "..", "..", "data", "xml_results", f"{xml_name}.xml")
+        output_file = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "graphs", f"{xml_name}_graph.json")
 
-    # Parse the XML file -> JSON format
-    parsed = parse_flowdroid_xml(xml_file)
-    G = build_graph(parsed)
-    export_json(G, output_file)
+        # Parse the XML file -> JSON format
+        parsed = parse_flowdroid_xml(xml_file)
+        G = build_graph(parsed)
+        export_json(G, output_file)
 
-    print(f"Graph exported successfully to {output_file}")
+        print(f"Graph exported successfully to {output_file}")
+    except Exception as e:
+        print(f"[graph_builder.py] Error: {e}")

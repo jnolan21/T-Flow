@@ -1,12 +1,25 @@
 from pathlib import Path
 import json
+import sys
 from dash import Dash, html, dcc, Output, Input
 import dash_cytoscape as cyto
 from collections import deque
 
 # Paths
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-GRAPH_JSON = PROJECT_ROOT / "outputs/graphs/LocationLeak1_graph.json"
+
+# Discover the available graphs in "outputs/graphs"
+GRAPH_DIR = PROJECT_ROOT / "outputs/graphs"
+print(GRAPH_DIR)
+def get_available_graphs():
+    """Search "outputs/graphs" and find all {name}_graph.json files as viable graphs to display"""
+    graph_options = []
+    for f in GRAPH_DIR.glob("*_graph.json"):
+        graph_options.append(f.stem.replace("_graph", ""))
+    return graph_options
+
+# Get all the available graphs to display
+AVAILABLE_GRAPHS = get_available_graphs()
 
 
 # Make a JS-safe ID (some of these markers will trigger weird behavior - I found out while tryint to use "toString" as a node name)
@@ -53,7 +66,14 @@ html.Div([
                 "borderRadius": "8px",
                 "padding": "10px",
                 "marginRight": "10px",
-        }
+            }
+        ),
+        dcc.Dropdown(
+            id="graph-selector",
+            options=[{"label": name, "value": name} for name in AVAILABLE_GRAPHS],
+            value=AVAILABLE_GRAPHS[0] if AVAILABLE_GRAPHS else None,
+            placeholder="Select a program...",
+            style={"marginBottom": "15px"}
         ),
         html.H3("Graph View"),
         cyto.Cytoscape(
@@ -243,15 +263,25 @@ def display_graph_stats(graph_data):
     ])
 
 
-# Load JSON graph into Store
+# Load JSON graph into Store based on which graph the user selects
 @app.callback(
     Output("graph-data-store", "data"),
-    Input("graph-data-store", "id")
+    Input("graph-selector", "value")
 )
-def load_graph(_):
-    with open(GRAPH_JSON, "r") as f:
-        data = json.load(f)
-    return data
+def load_graph(selected_name):
+    print(f"Loading graph data! Selected_name: {selected_name}")
+    if not selected_name:
+        return None
+    
+    graph_path = GRAPH_DIR / f"{selected_name}_graph.json"
+    print(f"graph_path: {graph_path}")
+
+    if not graph_path.exists():
+        return None
+    
+    # Open the graph JSON file, and return it's contents as a JSON object
+    with open(graph_path, "r") as f:
+        return json.load(f)
 
 
 # Save the info of a node when it's clicked on

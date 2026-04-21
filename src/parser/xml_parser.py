@@ -366,8 +366,11 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python3 xml_parser.py <XML_NAME>")
         sys.exit(1)
-    # Fetch the XML file
-    xml_file = f"data/xml_results/{sys.argv[1]}.xml"
-    # Parse the XML file
-    parsed = parse_flowdroid_xml(xml_file)
-    print(json.dumps(parsed, indent=2))
+    try:
+        # Fetch the XML file
+        xml_file = f"data/xml_results/{sys.argv[1]}.xml"
+        # Parse the XML file
+        parsed = parse_flowdroid_xml(xml_file)
+        print(json.dumps(parsed, indent=2))
+    except Exception as e:
+        print(f"[xml_parser.py] Error: {e}")

@@ -6,7 +6,6 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 FLOWDROID_JAR = PROJECT_ROOT / "FlowDroid-2.15.1/soot-infoflow-cmd/target/soot-infoflow-cmd-jar-with-dependencies.jar"
-APK_DIR = PROJECT_ROOT / "FlowDroid-2.15.1/DroidBench/apk/Callbacks"
 SOURCES_SINKS = PROJECT_ROOT / "FlowDroid-2.15.1/SourcesAndSinks.txt"
 
 OUTPUT_DIR = PROJECT_ROOT / "data/xml_results"
@@ -21,15 +20,24 @@ def pretty_print_xml(xml_file: Path):
     print(f"Pretty-printed XML saved to: {xml_file}")
 
 
-def run_flowdroid(apk_name: str):
+def run_flowdroid(apk_folder: str, apk_name: str):
     """
     Run FlowDroid on the supplied .apk file and save the resulting XML file in data/xml_results
     """
+    APK_DIR = PROJECT_ROOT / f"FlowDroid-2.15.1/DroidBench/apk/{apk_folder}"
     apk_path = APK_DIR / f"{apk_name}.apk"
     output_file = OUTPUT_DIR / f"{apk_name}.xml"
 
+    if not apk_path.exists():
+        # Verify the apk file exists
+        raise FileNotFoundError(f"APK not found: {apk_path}")
+
     # Make sure the output folder exists
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Ensure the XML file exists before running FlowDroid
+    if not output_file.exists():
+        output_file.touch()
 
     cmd = [
         "java",
@@ -70,13 +78,18 @@ def run_flowdroid(apk_name: str):
 
     print(f"\n Results saved to: {output_file}")
 
-    # Pretty-print the XML
+    # Pretty-print the XML if the file exists
+    if not output_file.exists():
+        raise RuntimeError(f"FlowDroid did not produce output: {output_file}")
     pretty_print_xml(output_file)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python3 run_flowdroid.py <APK_NAME>")
+    if len(sys.argv) != 3:
+        print("Usage: python3 run_flowdroid.py <APK_FOLDER (i.e. Callbacks, GeneralJava, etc.)> <APK_NAME>")
         sys.exit(1)
 
-    run_flowdroid(sys.argv[1])
+    try:
+        run_flowdroid(sys.argv[1], sys.argv[2])
+    except Exception as e:
+        print(f"[run_flowdroid.py] Error: {e}")
