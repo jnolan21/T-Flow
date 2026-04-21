@@ -42,6 +42,19 @@ html.Div([
 
     # Left: Graph Panel
     html.Div([
+        dcc.Checklist(
+            id="simplify-toggle",
+            options=[{"label": "Show only Source → Sink", "value": "simplify"}],
+            value=[],
+            style={
+                "marginBottom": "10px",
+                "flex": "3",
+                "border": "2px solid #ccc",
+                "borderRadius": "8px",
+                "padding": "10px",
+                "marginRight": "10px",
+        }
+        ),
         html.H3("Graph View"),
         cyto.Cytoscape(
             id="taint-graph",
@@ -65,18 +78,22 @@ html.Div([
                         "text-wrap": "wrap",
                         "text-max-width": "120px",
                         "text-valign": "top",
-                        "text-halign": "center"
+                        "text-halign": "left"
                     }
                 },
                 {"selector": ".source", "style": {"background-color": "#FF4136", "label": "data(label)"}},
                 {"selector": ".sink", "style": {"background-color": "#0074D9", "label": "data(label)"}},
                 {"selector": ".intermediate", "style": {"background-color": "#2ECC40", "label": "data(label)"}},
                 {"selector": "edge", "style": {"line-color": "#888", "target-arrow-color": "#888", "target-arrow-shape": "triangle"}},
-                {"selector": ".highlighted", "style": {
-                    "opacity": 1,
+                {"selector": "edge.highlighted", "style": {
                     "line-color": "#FF4136",
                     "target-arrow-color": "#FF4136",
                     "width": 4
+                }},
+                {"selector": "node.highlighted", "style": {
+                    "opacity": 1,
+                    "border-width": 2,
+                    "border-color": "#FF4136"
                 }},
                 {"selector": ".faded", "style": {"opacity": 0.2}},
             ]
@@ -234,7 +251,6 @@ def display_graph_stats(graph_data):
 def load_graph(_):
     with open(GRAPH_JSON, "r") as f:
         data = json.load(f)
-    print(f"[DEBUG] Loaded {len(data.get('nodes', []))} nodes and {len(data.get('edges', []))} edges")
     return data
 
 
@@ -253,24 +269,82 @@ def store_selected_node(node_data):
 @app.callback(
     Output("taint-graph", "elements"),
     Input("graph-data-store", "data"),
-    Input("selected-node", "data")
+    Input("selected-node", "data"),
+    Input("simplify-toggle", "value") # Determine if intermediate nodes should be hidden
 )
-def build_elements(graph_data, selected_node):
+def build_elements(graph_data, selected_node, simplify_mode):
     if not graph_data:
         return []
     
+    simplify = "simplify" in (simplify_mode or [])
+    
+    if simplify:
+        """Sink -> Source Only Button Selected - Rewrite graph_data"""
+        # Build adjacency
+        adj_forward = {}
+        for edge in graph_data["edges"]:
+            src = safe_id(edge["from"])
+            tgt = safe_id(edge["to"])
+            adj_forward.setdefault(src, []).append(tgt)
+
+        # Identify sources and sinks
+        sources = []
+        sinks = set()
+        node_map = {}
+
+        for node in graph_data["nodes"]:
+            sid = safe_id(node["id"])
+            node_map[sid] = node
+            if node.get("type") == "source":
+                sources.append(sid)
+            if node.get("type") == "sink":
+                sinks.add(sid)
+
+        # Find all source → sink reachability
+        new_edges = set()
+
+        for src in sources:
+            queue = deque([src])
+            visited = set()
+
+            while queue:
+                curr = queue.popleft()
+                if curr in visited:
+                    continue
+                visited.add(curr)
+
+                if curr in sinks and curr != src:
+                    new_edges.add((src, curr))
+
+                for nxt in adj_forward.get(curr, []):
+                    queue.append(nxt)
+
+        # Replace graph with simplified version
+        simplified_nodes = [
+            node for node in graph_data["nodes"]
+            if node.get("type") in {"source", "sink"}
+        ]
+
+        graph_data = {
+            "nodes": simplified_nodes,
+            "edges": [{"from": s, "to": t} for s, t in new_edges]
+        }
+
+    """Rebuild the elements"""
     # Add a catch to block useless nodes from being added to the graph
     USELESS_LABELS = {"append", "toString", "onResume"}
 
     filtered_nodes = []
     for node in graph_data.get("nodes", []):
         label = node.get("label", "")
-        # Remove useless nodes
-        if label in USELESS_LABELS:
-            continue
-        # Remove tiny meaningless labels
-        if node.get("type") == "intermediate" and len(label) < 4:
-            continue
+        if not simplify:
+            # Only append intermediate nodes if "simplify" not checked
+            # Remove useless nodes
+            if label in USELESS_LABELS:
+                continue
+            # Remove tiny meaningless labels
+            if node.get("type") == "intermediate" and len(label) < 4:
+                continue
 
         filtered_nodes.append(node)
 
@@ -372,9 +446,6 @@ def build_elements(graph_data, selected_node):
                 "classes": edge_class
             })
 
-
-
-    print(f"[DEBUG] Total elements: {len(elements)}")
     return elements
 
 
