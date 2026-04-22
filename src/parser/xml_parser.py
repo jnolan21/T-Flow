@@ -6,130 +6,164 @@ import hashlib
 
 
 def stable_id(stmt: str) -> str:
-    """Get a stable hash to use for the id of intermediate nodes"""
+    """
+    Creates a short, consistent ID for a statement.
+
+    Why we need this:
+    - We use it as a node ID in the graph
+    - Same statement always produces same ID
+    """
     return hashlib.md5(stmt.encode()).hexdigest()[:10]
 
 def extract_short_id(statement: str):
     """
-    Generate a more unique and readable ID for a FlowDroid statement.
-    - For sources: use the method name (getLatitude, getLongitude)
-    - For sinks: include method name + first literal argument if present (Log.d_Latitude)
-    - For intermediates: fallback to statement but remove extra spaces/newlines
+    Creates a readable ID for a FlowDroid statement.
+
+    Idea:
+    - Try to use method name if possible (i.e. getLatitude for LocationLeak1)
+    - Otherwise, fallback to shortened raw text
     """
-    # Try to match a method inside <>
+    # Try to find method name inside <Class: type method()>
     method_match = re.search(r"<[^:]+: [^ ]+ (\w+)\(", statement)
+    # Try to find first string literal (like "Latitude")
     literal_match = re.search(r'\("([^"]+)"', statement)  # get first quoted literal, e.g. "Latitude"
 
+    # If we found a method name
     if method_match:
         base = method_match.group(1)
+        # If we also found a string literal, combine them
         if literal_match:
             return f"{base}_{literal_match.group(1)}"
+        # Otherwise just return the method name
         return base
 
-    # Remove line breaks and truncate to 60 chars for intermediates
+    # If no method found, clean and shorten the statement
     clean = statement.replace("\n", " ").strip()
     return clean[:60]
 
-def extract_sink_line(sink_stmt: str, sink_elem) -> str:
+# Regex that matches method calls like:
+# virtualinvoke obj.<Class: type method(...)>(args)
+METHOD_CALL_RE = re.compile(
+    r'(virtualinvoke|staticinvoke)\s+<?([^:]+):\s+([^ ]+)\s+(\w+)\((.*?)\)>?\((.*)\)'
+)
+# Regex that matches method calls like:
+# x = something
+ASSIGN_RE = re.compile(r'^(\$\w+|\w+(?:\[\d+\])?)\s*=\s*(.*)$')
+# Regex that matches field writes like:
+# <Class: type field> = value
+FIELD_WRITE_RE = re.compile(
+    r'<([^:]+):\s+([^ ]+)\s+(\w+)>\s*=\s*(.+)'
+)
+
+
+def extract_source_line(stmt: str) -> str:
     """
-    Reconstruct a Java-like sink line from FlowDroid IR + AccessPath.
-    Example:
-        staticinvoke Log.d("Latitude", $u2)
-        -> Log.d(latitude)
-    """
-    pattern = r'staticinvoke\s+<([^:]+):.*?\s(\w+)\(.*?\)>\((.*)\)'
-    match = re.search(pattern, sink_stmt)
+    Converts FlowDroid IR (low-level representation) into a simplified Java-like assignment.
 
-    if not match:
-        return sink_stmt
-    
-    class_path, method, args = match.groups()
-
-    # Get simple class name (ex: Log from android.util.Log)
-    class_name = class_path.split(".")[-1]
-
-    # Get AccessPath values (ex. <AccessPath Value="lon" Type="double" TaintSubFields="true"/> -> {"lon": "double"})
-    access_paths = {}
-    for ap in sink_elem.findall("AccessPath"):
-        access_paths[ap.attrib.get("Value")] = ap.attrib.get("Type")
-
-    # Split args (ex: Longitude from ("Longtitude", $u2))
-    arg_list = [a.strip() for a in args.split(',')]
-
-    resolved_args = []
-    for arg in arg_list:
-        arg = arg.strip().strip('"')
-
-        if arg.startswith("$"):
-            # Try to resolve via AccessPath
-            if arg in access_paths:
-                # Convert type to readable var name
-                type = access_paths[arg]
-                simple = type.split(".")[-1].lower()
-                resolved_args.append(simple)
-            else:
-                resolved_args.append("unknown")
-        else:
-            resolved_args.append(arg.lower())
-        
-    return f"{class_name}.{method}({', '.join(resolved_args)})"
-
-
-def extract_source_line(source_stmt: str, source_elem) -> str:
-    """
-    Reconstruct a Java-like source line from FlowDroid IR.
-    Example:
+    Example input:
         lon = virtualinvoke loc.<Location: double getLongitude()>()
-        -> double lon = loc.getLongitude()
+
+    Output:
+        double lon = loc.getLongitude()
     """
-    # Match: lhs = virtualinvoke receiver.<class: returnType method()>
-    pattern = r'(\$\w+|\w+)\s*=\s*virtualinvoke\s+(\w+)\.<([^:]+):\s*([^ ]+)\s+(\w+)\(\)>'
-    match = re.search(pattern, source_stmt)
+    # Step 1: Try to match a method call pattern
+    m = METHOD_CALL_RE.search(stmt)
+    # If no method call if found, just return the raw statement
+    if not m:
+        return stmt
 
-    if not match:
-        return source_stmt
+    # Extract parts from regex:
+    # invoke_type = virtualinvoke / staticinvoke
+    # cls = class name (android.location.Location)
+    # ret = return type (double, String, etc.)
+    # method = method name (getLongitude)
+    # sig = method signature (unused here)
+    # args = arguments passed to method
+    invoke_type, cls, ret, method, sig, args = m.groups()
+
+    # Step 2: Extrzct the left-hand side variable (e.g. lon in LocationLeak1)
+    lhs = stmt.split("=")[0].strip()
+
+    # Step 3: Try to guess the object (receiver) calling the method
+    # Example: loc.<Location: ...>
+    receiver_match = re.search(r'([\w$#]+)\.<', stmt)
+    # If found, use it; otherwise fallback to "obj"
+    receiver = receiver_match.group(1) if receiver_match else "obj"
+    # Clean receiver (remove #5 noise)
+    receiver = receiver.split("#")[0]
+
+    # Step 4: Build simplified Java-like code
+    # Example:
+    # double long = loc.getLongitude()
+    return f"{ret} {lhs} = {receiver}.{method}()"
+
+
+def extract_sink_line(stmt: str) -> str:
+    """
+    Converts FlowDroid sink IR into a simplified Java-like call.
+
+    Example input:
+        staticinvoke <Log: int d(String,String)>("Longtitude", $u2)
+
+    Output:
+        Log.d(Longtitude, $u2)
+    """
+    # Step 1: Match method call pattern in IR
+    m = METHOD_CALL_RE.search(stmt)
+    # If parsing fails, return raw statement
+    if not m:
+        return stmt
     
-    lhs, receiver, class_path, return_type, method = match.groups()
-    
-    # Get the clean types
-    simple_type = return_type.split(".")[-1]
-    class_name = class_path.split(".")[-1]
+    # Extract components
+    _, cls, _, method, _, args = m.groups()
 
-    # Map each variable in the AccessPath to it's type (ex. "lon" -> "double")
-    access_map = {}
-    for ap in source_elem.findall("AccessPath"):
-        access_map[ap.attrib.get("Value")] = ap.attrib.get("Type")
+    # Step 2: Get only class name (remove full package path)
+    # Example:
+    # android.util.Log -> Log
+    class_name = cls.split(":")[0].split(".")[-1]
 
-    var_name = lhs
-    if lhs in access_map:
-        var_name = lhs
+    # Step 3: Build simplified sink call
+    # We reuse original arguments (important for our taint tracking)
+    return f"{class_name}.{method}({args})"
 
-    # Build Java-like line
-    return f"{simple_type} {var_name} = {receiver}.{method}()"
 
 def classify_node(stmt: str) -> str:
-    """Helper to check if a statement is "noise", or nonsense"""
+    """
+    Labels a statement type so we can decide how to treat it.
+
+    Categories:
+    - noise: irrelevant compiler-generated stuff
+    - semantic: meaningful operations (method calls)
+    - assign: simple assignments
+    """
     s = stmt.strip()
 
+    # Ignore synthetic helper methods generated by the compiler
     if "access$" in s:
         return "noise"
 
+    # Ignore dummy entry points
     if "dummyMain" in s:
         return "noise"
 
+    # Ignore Android internal parameters
     if "@parameter" in s or "@this" in s:
         return "noise"
 
+    # Ignore constructors
     if "specialinvoke" in s and "<init>" in s:
         return "noise"
 
+    # Method calls are important (sources/sinks/transformations)
     if "virtualinvoke" in s or "staticinvoke" in s:
         return "semantic"
 
+    # Simple assignment
     if "=" in s:
         return "assign"
 
     return "unknown"
+
 
 def reconstruct_java_line(stmt: str) -> str:
     """Reconstruct the original Java source code line for a statement"""
@@ -160,6 +194,7 @@ def reconstruct_java_line(stmt: str) -> str:
 
     # fallback
     return clean_label(stmt)
+
 
 def is_meaningful_node(stmt: str) -> bool:
     # Skip compiler-generated accessor methods and very short generic statements
@@ -193,6 +228,7 @@ def is_meaningful_node(stmt: str) -> bool:
 
     return False
 
+
 def parse_method_signature(method_sig: str):
     """
     Extract class name and method name from FlowDroid signature.
@@ -209,6 +245,7 @@ def parse_method_signature(method_sig: str):
     method = m.group(2)
     simple_class = full_class.split(".")[-1]
     return (simple_class, method)
+
 
 def clean_label(stmt: str) -> str:
     """Make the statement for intermediate nodes cleaner"""
@@ -255,7 +292,7 @@ def parse_flowdroid_xml(file_path: str):
         sink_stmt = sink_elem.attrib.get("Statement")
         sink_method = sink_elem.attrib.get("Method")
         sink_id = stable_id(sink_stmt)
-        sink_name = extract_sink_line(sink_stmt, sink_elem)
+        sink_name = extract_sink_line(sink_stmt)
         sink_line = sink_elem.attrib.get("LineNumber")
         cls, method_name = parse_method_signature(sink_method)
 
@@ -278,11 +315,10 @@ def parse_flowdroid_xml(file_path: str):
             continue
             
         for source_elem in sources_elem.findall("Source"):
-            print(source_elem)
             source_stmt = source_elem.attrib.get("Statement")
             source_method = source_elem.attrib.get("Method")
             source_id = stable_id(source_stmt)
-            source_name = extract_source_line(source_stmt, source_elem)
+            source_name = extract_source_line(source_stmt)
             source_line = source_elem.attrib.get("LineNumber")
             cls, method_name = parse_method_signature(source_method)
 
@@ -314,7 +350,7 @@ def parse_flowdroid_xml(file_path: str):
 
                     # 1) Detect Double.toString
                     if "Double: java.lang.String toString" in intermediate_stmt:
-                        m = re.search(r'\((\w+)\)', intermediate_stmt)
+                        m = re.search(r'\(([^)]+)\)', intermediate_stmt)
                         if m:
                             pending_conversion = m.group(1)
                         continue
@@ -371,6 +407,76 @@ if __name__ == "__main__":
         xml_file = f"data/xml_results/{sys.argv[1]}.xml"
         # Parse the XML file
         parsed = parse_flowdroid_xml(xml_file)
-        print(json.dumps(parsed, indent=2))
+        #print(json.dumps(parsed, indent=2))
     except Exception as e:
         print(f"[xml_parser.py] Error: {e}")
+
+
+
+# OLD FUNCTIONS SAVED AS BACKUP
+"""
+def extract_sink_line(sink_stmt: str) -> str:
+    ""
+    Reconstruct a Java-like sink line from FlowDroid IR.
+    Example:
+        staticinvoke <android.util.Log: int d(java.lang.String,java.lang.String)>("Longtitude", $u2)
+        -> Log.d(longitude)
+    ""
+    print("SINK:", sink_stmt)
+    # Split the statement by paces
+    parts = sink_stmt.split(" ")
+    print(parts)
+
+    # Get the sink variable name
+    var_name = parts[0]
+
+    # Get the method that was called in the sink (last element)
+    raw_sink_method = parts[-1]
+    sink_method = raw_sink_method.split("(")[0]
+    
+    # Get the type of the sink method
+    raw_sink_method_type = parts[len(parts)-2]
+    sink_method_type = raw_sink_method_type.split(".")[-1]
+
+    # Get the name of the calling class
+    raw_receiver = parts[3]
+    receiver = raw_receiver.split(".")[0].split("#")[0]
+
+
+    # Build Java-like line
+    print(f"{sink_method_type} {var_name} = {receiver}.{sink_method}()\n\n")
+    return f"{sink_method_type} {var_name} = {receiver}.{sink_method}()"
+"""
+"""
+def extract_source_line(source_stmt: str) -> str:
+    ""
+    Reconstruct a Java-like source line from FlowDroid IR.
+    Example:
+        lon = virtualinvoke loc.<Location: double getLongitude()>()
+        -> double lon = loc.getLongitude()
+    ""
+    print("SOURCE:", source_stmt)
+    # Split the statement by paces
+    parts = source_stmt.split(" ")
+    print(parts)
+
+    # Get the source variable name
+    var_name = parts[0]
+
+    # Get the method that was called in the source (last element)
+    raw_source_method = parts[-1]
+    source_method = raw_source_method.split("(")[0]
+    
+    # Get the type of the source method
+    raw_source_method_type = parts[len(parts)-2]
+    source_method_type = raw_source_method_type.split(".")[-1]
+
+    # Get the name of the calling class
+    raw_receiver = parts[3]
+    receiver = raw_receiver.split(".")[0].split("#")[0]
+
+
+    # Build Java-like line
+    print(f"{source_method_type} {var_name} = {receiver}.{source_method}()\n\n")
+    return f"{source_method_type} {var_name} = {receiver}.{source_method}()"
+"""
