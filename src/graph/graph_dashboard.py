@@ -10,7 +10,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # Discover the available graphs in "outputs/graphs"
 GRAPH_DIR = PROJECT_ROOT / "outputs/graphs"
-print(GRAPH_DIR)
 def get_available_graphs():
     """Search "outputs/graphs" and find all {name}_graph.json files as viable graphs to display"""
     graph_options = []
@@ -269,12 +268,10 @@ def display_graph_stats(graph_data):
     Input("graph-selector", "value")
 )
 def load_graph(selected_name):
-    print(f"Loading graph data! Selected_name: {selected_name}")
     if not selected_name:
         return None
     
     graph_path = GRAPH_DIR / f"{selected_name}_graph.json"
-    print(f"graph_path: {graph_path}")
 
     if not graph_path.exists():
         return None
