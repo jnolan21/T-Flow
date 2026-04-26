@@ -25,7 +25,7 @@
         </Fields>
        </AccessPath>
       </PathElement>
-      <PathElement Statement="$u0 := @parameter0: de.ecspride.LocationLeak1" Method="&lt;de.ecspride.LocationLeak1: void access$1(de.ecspride.LocationLeak1,java.lang.String)&gt;">
+      <PathElement Statement="return" Method="&lt;de.ecspride.LocationLeak1: void access$1(de.ecspride.LocationLeak1,java.lang.String)&gt;">
        <AccessPath Value="$u4" Type="de.ecspride.LocationLeak1" TaintSubFields="true">
         <Fields>
          <Field Value="&lt;de.ecspride.LocationLeak1: java.lang.String longtitude&gt;" Type="java.lang.String"/>
@@ -40,7 +40,7 @@
         </Fields>
        </AccessPath>
       </PathElement>
-      <PathElement Statement="this := @this: de.ecspride.LocationLeak1$MyLocationListener" Method="&lt;de.ecspride.LocationLeak1$MyLocationListener: void onLocationChanged(android.location.Location)&gt;">
+      <PathElement Statement="return" Method="&lt;de.ecspride.LocationLeak1$MyLocationListener: void onLocationChanged(android.location.Location)&gt;">
        <AccessPath Value="$r4" Type="de.ecspride.LocationLeak1$MyLocationListener" TaintSubFields="true">
         <Fields>
          <Field Value="&lt;de.ecspride.LocationLeak1$MyLocationListener: de.ecspride.LocationLeak1 this$0&gt;" Type="de.ecspride.LocationLeak1"/>
@@ -218,7 +218,7 @@
  </Results>
  <PerformanceData>
   <PerformanceEntry Name="TotalRuntimeSeconds" Value="1"/>
-  <PerformanceEntry Name="MaxMemoryConsumption" Value="100"/>
+  <PerformanceEntry Name="MaxMemoryConsumption" Value="90"/>
   <PerformanceEntry Name="SourceCount" Value="2"/>
   <PerformanceEntry Name="SinkCount" Value="2"/>
  </PerformanceData>
