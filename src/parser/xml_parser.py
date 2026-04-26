@@ -173,12 +173,9 @@ def update_var_map(stmt: str, var_map: dict):
 
     lhs, rhs = stmt.split("=", 1)
     lhs, rhs = lhs.strip(), rhs.strip()
-    print("** INSIDE 'update_var_map()' **")
-    print("lhs:", lhs)
-    print("rhs:", rhs)
 
     resolved_rhs = resolve_var(rhs, var_map)
-    print("RESOLVED_RHS:", resolved_rhs)
+
     #var_map[lhs] = resolved_rhs
     var_map[lhs] = rhs
 
@@ -190,9 +187,7 @@ def update_var_map(stmt: str, var_map: dict):
 
         # Handle staticinvoke statements
         if invoke_type == "staticinvoke":
-            print("STATIC TIME BITCH")
             expr = parse_staticinvoke(cls, method, args, var_map)
-            print(expr)
         
         else:
             # Extract the receiver (i.e. loc.<...> -> loc)
@@ -219,7 +214,6 @@ def update_var_map(stmt: str, var_map: dict):
         return
 
     # Fallback: direct mapping
-    print("FALLBAKC PIMP")
     var_map[lhs] = resolve_var(rhs, var_map)
 
 
@@ -526,11 +520,10 @@ def parse_staticinvoke(cls, method, args, var_map):
     class_name = cls.split(":")[0].split(".")[-1]
 
     # Split args safely
-    print("ARGS first yooo:", args)
     args_resolved = ""
     if args not in var_map:
         args_resolved = resolve_var(args, var_map)
-    print("ARGS RESOLVEDDDDDDDD:", args_resolved)
+
     args_resolved = args_resolved.split(",")
     args_resolved = [a.strip() for a in args_resolved if a.strip()]
 
@@ -559,11 +552,18 @@ def process_path(raw_path):
     source_stmt = raw_path["source"].get("Statement")
     source_label = extract_source_line(source_stmt)
 
+    # Get the class and method in which this line occurred
+    class_name, method_name = parse_method_signature(raw_path["source"].get("Method"))
+
+
     processed_nodes.append((
         stable_id(source_label),
         source_label,
         "source",
-        source_stmt
+        source_stmt,
+        raw_path["source"].get("LineNumber"),
+        class_name,
+        method_name
     ))
 
     update_var_map(source_stmt, var_map)
@@ -574,8 +574,8 @@ def process_path(raw_path):
     # ---- INTERMEDIATE ----
     i = 1
     for elem in raw_path["path"]:
-        print("---------------------------------------------------")
-        print(f"ELEM #{i}:", json.dumps(elem, indent=2))
+        #print("---------------------------------------------------")
+        #print(f"ELEM #{i}:", json.dumps(elem, indent=2))
         i += 1
         stmt = elem.get("stmt")
 
@@ -583,7 +583,7 @@ def process_path(raw_path):
             continue
 
         # Track variables first (i.e. $u1, $u2, etc.)
-        print("OLD VAR MAP:", json.dumps(var_map, indent=2))
+        #print("OLD VAR MAP:", json.dumps(var_map, indent=2))
         
         update_var_map(stmt, var_map)
 
@@ -615,15 +615,15 @@ def process_path(raw_path):
             var_map[lhs] = var_map.pop(raw_lhs)
 
         
-        print('lhs:', lhs)
-        print('rhs:', rhs)
+        #print('lhs:', lhs)
+        #print('rhs:', rhs)
 
         resolved = ""
         if rhs not in var_map:
             resolved = resolve_var(rhs, var_map)
-        print("resolved:", resolved)
+        #print("resolved:", resolved)
 
-        print("New var_map:", json.dumps(var_map, indent=2))
+        #print("New var_map:", json.dumps(var_map, indent=2))
 
         # 2) Detct ONLY meaningful variables
         label = ""
@@ -636,37 +636,40 @@ def process_path(raw_path):
             else:
                 label = f"{lhs} = {rhs}"
 
-        print("label:", label)
+        #print("label:", label)
         
         # De-duplicate identical semantic states
         if stmt != source_stmt and stmt != raw_path["sink"].get("Statement") and label and ("$" not in label) and latest_values.get(lhs) != label:
             latest_values[lhs] = label
+
+            # Get the method and class in which this line occurred
+            class_name, method_name = parse_method_signature(elem.get("method"))
             processed_nodes.append((
                 stable_id(label),
                 label,
                 "intermediate",
-                stmt
+                stmt,
+                None,
+                class_name,
+                method_name
             ))
-            print("New Node Added:", (stable_id(label), label, "intermediate", stmt))
+            #print("New Node Added:", (stable_id(label), label, "intermediate", stmt))
     
     # ---- SINK ----
     sink_stmt = raw_path["sink"].get("Statement")
     sink_label = reconstruct_semantic(sink_stmt, var_map)
-
-    # If a 
-
-    print("\n\n\n\nSINK:", raw_path["sink"])
-    print("var_map", var_map)
-    print("\n", )
-    print("sink_stmt:", sink_stmt)
-    print("sink_label:", sink_label)
+    # Get the method and class in which this line occurred
+    class_name, method_name = parse_method_signature(elem.get("method"))
 
 
     processed_nodes.append((
         stable_id(sink_label),
         sink_label,
         "sink",
-        sink_stmt
+        sink_stmt,
+        raw_path["sink"].get("LineNumber"),
+        class_name,
+        method_name
     ))
 
     return processed_nodes
@@ -716,7 +719,7 @@ def parse_flowdroid_xml(file_path: str):
 
         # Build nodes + edges linearly
         for i, node in enumerate(processed):
-            nid, label, ntype, raw = node
+            nid, label, ntype, raw, line, class_name, method_name = node
 
             if nid not in node_set:
                 nodes.append({
@@ -724,7 +727,10 @@ def parse_flowdroid_xml(file_path: str):
                     "label": label,
                     "type": ntype,
                     "raw": raw,
-                    "code": label
+                    "code": label,
+                    "line": line,
+                    "class": class_name,
+                    "method": method_name
                 })
                 node_set.add(nid)
 

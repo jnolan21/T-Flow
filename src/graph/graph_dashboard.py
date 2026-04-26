@@ -486,7 +486,7 @@ def display_node_info(node_data):
     if not node_data:
         return html.Div("Click a node to see details.")
 
-    return html.Div([
+    children = [
         html.H4(node_data.get("label", "Unknown")),
         html.P([
             html.B("Type: "), node_data.get("type", "unknown")
@@ -497,9 +497,17 @@ def display_node_info(node_data):
         html.P([
             html.B("Method: "), node_data.get("method", "N/A")
         ]),
-        html.P([
-            html.B("Line: "), str(node_data.get("line", "N/A"))
-        ]),
+    ]
+
+    # Only show line if it's actually present (i.e. not None)
+    if node_data.get("line") is not None:
+        children.append(
+            html.P([
+                html.B("Line: "), str(node_data["line"])
+            ])
+        )
+
+    children.extend([
         html.H5("Code"),
         html.Pre(node_data.get("code") or "N/A", style={
             "background": "#f4f4f4",
@@ -512,6 +520,8 @@ def display_node_info(node_data):
             "fontSize": "12px"
         })
     ])
+
+    return html.Div(children)
 
 
 # Run app
