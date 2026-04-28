@@ -15,7 +15,7 @@ def get_available_graphs():
     graph_options = []
     for f in GRAPH_DIR.glob("*_graph.json"):
         graph_options.append(f.stem.replace("_graph", ""))
-    return graph_options
+    return sorted(graph_options)
 
 # Get all the available graphs to display
 AVAILABLE_GRAPHS = get_available_graphs()
