@@ -103,7 +103,14 @@ html.Div([
                 {"selector": ".source", "style": {"background-color": "#FF4136", "label": "data(label)"}},
                 {"selector": ".sink", "style": {"background-color": "#0074D9", "label": "data(label)"}},
                 {"selector": ".intermediate", "style": {"background-color": "#2ECC40", "label": "data(label)"}},
-                {"selector": "edge", "style": {"line-color": "#888", "target-arrow-color": "#888", "target-arrow-shape": "triangle"}},
+                {"selector": "edge", "style": {
+                    "line-color": "#888",
+                    "target-arrow-color": "#888",
+                    "target-arrow-shape": "triangle",
+                    "arrow-scale": 1.5,
+                    "curve-style": "bezier"
+                    }
+                },
                 {"selector": "edge.highlighted", "style": {
                     "line-color": "#FF4136",
                     "target-arrow-color": "#FF4136",

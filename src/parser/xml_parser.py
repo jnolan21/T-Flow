@@ -238,6 +238,24 @@ def reconstruct_semantic(stmt: str, var_map: dict) -> str:
                 arg = var_map[arg]
             args_resolved.append(arg)
 
+        # Make sure non-variable, non-numeric args are surrounded in quotes, variable args are not
+        def is_number(s):
+            """Helper for loop below"""
+            try:
+                float(s)
+                return True
+            except ValueError:
+                return False
+        for i, arg in enumerate(args_resolved):
+            if not is_number(arg) and arg not in var_map:
+                args_resolved[i] = f'"{arg}"'
+
+        # Return either <instance>.<method> or <class>.method depending on invoke type
+        instance_invoke = re.search(r'virtualinvoke\s+([^.]+)\.', stmt)
+        if instance_invoke:
+            instance = instance_invoke.group(1)
+            return f"{instance}.{method}({", ".join(args_resolved)})"
+        
         return f"{class_name}.{method}({", ".join(args_resolved)})"
 
     # Assignment
@@ -547,6 +565,8 @@ def process_path(raw_path):
     access_vars = extract_access_paths(raw_path)
     var_map = {}
     processed_nodes = []
+    source_added = False # Track and properly label the source node
+
 
     # ---- SOURCE ----
     source_stmt = raw_path["source"].get("Statement")
@@ -555,16 +575,25 @@ def process_path(raw_path):
     # Get the class and method in which this line occurred
     class_name, method_name = parse_method_signature(raw_path["source"].get("Method"))
 
-
-    processed_nodes.append((
-        stable_id(source_label),
-        source_label,
-        "source",
-        source_stmt,
-        raw_path["source"].get("LineNumber"),
-        class_name,
-        method_name
-    ))
+    # Check if the source stmt is an assignment
+    lhs_match = ASSIGN_RE.search(source_stmt)
+    raw_lhs = ""
+    if lhs_match:
+        raw_lhs = lhs_match.group(1)
+    
+    # Only append the source statment if it's a real variable assignment
+    if "$" not in raw_lhs:
+        source_added = True
+        processed_nodes.append((
+            stable_id(source_label),
+            source_label,
+            "source",
+            source_stmt,
+            raw_path["source"].get("LineNumber"),
+            class_name,
+            method_name
+        ))
+        print("Source Node Added:", (stable_id(source_label), source_label, "source", source_stmt, raw_path["source"].get("LineNumber"), class_name, method_name))
 
     update_var_map(source_stmt, var_map)
 
@@ -574,8 +603,8 @@ def process_path(raw_path):
     # ---- INTERMEDIATE ----
     i = 1
     for elem in raw_path["path"]:
-        #print("---------------------------------------------------")
-        #print(f"ELEM #{i}:", json.dumps(elem, indent=2))
+        print("---------------------------------------------------")
+        print(f"ELEM #{i}:", json.dumps(elem, indent=2))
         i += 1
         stmt = elem.get("stmt")
 
@@ -583,7 +612,7 @@ def process_path(raw_path):
             continue
 
         # Track variables first (i.e. $u1, $u2, etc.)
-        #print("OLD VAR MAP:", json.dumps(var_map, indent=2))
+        print("OLD VAR MAP:", json.dumps(var_map, indent=2))
         
         update_var_map(stmt, var_map)
 
@@ -615,26 +644,44 @@ def process_path(raw_path):
             var_map[lhs] = var_map.pop(raw_lhs)
 
         
-        #print('lhs:', lhs)
-        #print('rhs:', rhs)
+        print('lhs:', lhs)
+        print('rhs:', rhs)
 
         resolved = ""
+        # Try to get the value of the rhs in the map
         if rhs not in var_map:
             resolved = resolve_var(rhs, var_map)
+        # If the rhs not in var_map, construct it's java representation
+        if resolved == "":
+            resolved = reconstruct_semantic(rhs, var_map)
         #print("resolved:", resolved)
 
-        #print("New var_map:", json.dumps(var_map, indent=2))
+        print("New var_map:", json.dumps(var_map, indent=2))
 
         # 2) Detct ONLY meaningful variables
         label = ""
         if involves_tracked_data(stmt, access_vars) or involves_tracked_data(resolved, access_vars):
             label = reconstruct_semantic(stmt, var_map)
-            if lhs in var_map:
+            print("CHECKS:")
+            print("lhs: ", lhs)
+            print("resolved: ", resolved)
+            print("rhs: ", rhs)
+            print("rhs in var_map:", (rhs in var_map))
+            print("lhs in var_map", (lhs in var_map))
+            if rhs in var_map:
+                # While rhs is a temp variable (i.e. '$u1', resolve it until it's a normal value)
+                while "$" in rhs and rhs in var_map:
+                    rhs = var_map[rhs]
+                    print("new RHS!:", rhs)
+                label = f"{lhs} = {rhs}"
+                var_map[lhs] = rhs
+            elif lhs in var_map:
                 label = f"{lhs} = {var_map[lhs]}"
             elif resolved:
                 label = f"{lhs} = {resolved}"
             else:
                 label = f"{lhs} = {rhs}"
+            print("LABEL:", label)
 
         #print("label:", label)
         
@@ -644,16 +691,31 @@ def process_path(raw_path):
 
             # Get the method and class in which this line occurred
             class_name, method_name = parse_method_signature(elem.get("method"))
-            processed_nodes.append((
-                stable_id(label),
-                label,
-                "intermediate",
-                stmt,
-                None,
-                class_name,
-                method_name
-            ))
-            #print("New Node Added:", (stable_id(label), label, "intermediate", stmt))
+            if source_added:
+                # Source already added
+                processed_nodes.append((
+                    stable_id(label),
+                    label,
+                    "intermediate",
+                    stmt,
+                    None,
+                    class_name,
+                    method_name
+                ))
+                print("New Intermediate Node Added:", (stable_id(label), label, "intermediate", stmt, None, class_name, method_name))
+            else:
+                # This is the source node
+                source_added = True
+                processed_nodes.append((
+                    stable_id(label),
+                    label,
+                    "source",
+                    stmt,
+                    None,
+                    class_name,
+                    method_name
+                ))
+                print("New Source Node Added:", (stable_id(label), label, "source", stmt, None, class_name, method_name))
     
     # ---- SINK ----
     sink_stmt = raw_path["sink"].get("Statement")
@@ -671,6 +733,7 @@ def process_path(raw_path):
         class_name,
         method_name
     ))
+    print("Sink Node Added:", (stable_id(sink_label), sink_label, "sink", sink_stmt, raw_path["sink"].get("LineNumber"), class_name, method_name))
 
     return processed_nodes
 
