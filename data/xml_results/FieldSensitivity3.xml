@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<DataFlowResults FileFormatVersion="102" TerminationState="Success">
+ <Results>
+  <Result>
+   <Sink Statement="virtualinvoke sms.&lt;android.telephony.SmsManager: void sendTextMessage(java.lang.String,java.lang.String,java.lang.String,android.app.PendingIntent,android.app.PendingIntent)&gt;(&quot;+49 1234&quot;, null, $u-1, null, null)" LineNumber="22" Method="&lt;de.ecspride.FieldSensitivity3: void onCreate(android.os.Bundle)&gt;" MethodSourceSinkDefinition="&lt;android.telephony.SmsManager: void sendTextMessage(java.lang.String,java.lang.String,java.lang.String,android.app.PendingIntent,android.app.PendingIntent)&gt;">
+    <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+   </Sink>
+   <Sources>
+    <Source Statement="$u-1 = virtualinvoke telephonyManager#6.&lt;android.telephony.TelephonyManager: java.lang.String getSimSerialNumber()&gt;()" LineNumber="19" Method="&lt;de.ecspride.FieldSensitivity3: void onCreate(android.os.Bundle)&gt;" MethodSourceSinkDefinition="&lt;android.telephony.TelephonyManager: java.lang.String getSimSerialNumber()&gt;">
+     <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+     <TaintPath>
+      <PathElement Statement="$u-1 = virtualinvoke telephonyManager#6.&lt;android.telephony.TelephonyManager: java.lang.String getSimSerialNumber()&gt;()" Method="&lt;de.ecspride.FieldSensitivity3: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="virtualinvoke d1.&lt;de.ecspride.Datacontainer: void setSecret(java.lang.String)&gt;($u-1)" Method="&lt;de.ecspride.FieldSensitivity3: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="secret" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="this.&lt;de.ecspride.Datacontainer: java.lang.String secret&gt; = secret" Method="&lt;de.ecspride.Datacontainer: void setSecret(java.lang.String)&gt;">
+       <AccessPath Value="this" Type="de.ecspride.Datacontainer" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.Datacontainer: java.lang.String secret&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="return" Method="&lt;de.ecspride.Datacontainer: void setSecret(java.lang.String)&gt;">
+       <AccessPath Value="d1" Type="de.ecspride.Datacontainer" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.Datacontainer: java.lang.String secret&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="$u-1 = virtualinvoke d1.&lt;de.ecspride.Datacontainer: java.lang.String getSecret()&gt;()" Method="&lt;de.ecspride.FieldSensitivity3: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="this" Type="de.ecspride.Datacontainer" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.Datacontainer: java.lang.String secret&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="ret0 = this.&lt;de.ecspride.Datacontainer: java.lang.String secret&gt;" Method="&lt;de.ecspride.Datacontainer: java.lang.String getSecret()&gt;">
+       <AccessPath Value="ret0" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="return ret0" Method="&lt;de.ecspride.Datacontainer: java.lang.String getSecret()&gt;">
+       <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="virtualinvoke sms.&lt;android.telephony.SmsManager: void sendTextMessage(java.lang.String,java.lang.String,java.lang.String,android.app.PendingIntent,android.app.PendingIntent)&gt;(&quot;+49 1234&quot;, null, $u-1, null, null)" Method="&lt;de.ecspride.FieldSensitivity3: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+     </TaintPath>
+    </Source>
+   </Sources>
+  </Result>
+ </Results>
+ <PerformanceData>
+  <PerformanceEntry Name="MaxMemoryConsumption" Value="97"/>
+  <PerformanceEntry Name="SourceCount" Value="1"/>
+  <PerformanceEntry Name="SinkCount" Value="1"/>
+ </PerformanceData>
+</DataFlowResults>

@@ -1,0 +1,29 @@
+<?xml version="1.0" ?>
+<DataFlowResults FileFormatVersion="102" TerminationState="Success">
+ <Results>
+  <Result>
+   <Sink Statement="staticinvoke &lt;android.util.Log: int d(java.lang.String,java.lang.String)&gt;(&quot;EX&quot;, uid)" LineNumber="22" Method="&lt;de.ecspride.MethodOverride1: void attachBaseContext(android.content.Context)&gt;" MethodSourceSinkDefinition="&lt;android.util.Log: int d(java.lang.String,java.lang.String)&gt;">
+    <AccessPath Value="uid" Type="java.lang.String" TaintSubFields="true"/>
+   </Sink>
+   <Sources>
+    <Source Statement="uid = virtualinvoke tManager#4.&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;()" LineNumber="21" Method="&lt;de.ecspride.MethodOverride1: void attachBaseContext(android.content.Context)&gt;" MethodSourceSinkDefinition="&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;">
+     <AccessPath Value="uid" Type="java.lang.String" TaintSubFields="true"/>
+     <TaintPath>
+      <PathElement Statement="uid = virtualinvoke tManager#4.&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;()" Method="&lt;de.ecspride.MethodOverride1: void attachBaseContext(android.content.Context)&gt;">
+       <AccessPath Value="uid" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="staticinvoke &lt;android.util.Log: int d(java.lang.String,java.lang.String)&gt;(&quot;EX&quot;, uid)" Method="&lt;de.ecspride.MethodOverride1: void attachBaseContext(android.content.Context)&gt;">
+       <AccessPath Value="uid" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+     </TaintPath>
+    </Source>
+   </Sources>
+  </Result>
+ </Results>
+ <PerformanceData>
+  <PerformanceEntry Name="TotalRuntimeSeconds" Value="1"/>
+  <PerformanceEntry Name="MaxMemoryConsumption" Value="88"/>
+  <PerformanceEntry Name="SourceCount" Value="1"/>
+  <PerformanceEntry Name="SinkCount" Value="1"/>
+ </PerformanceData>
+</DataFlowResults>

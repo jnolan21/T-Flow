@@ -1,0 +1,113 @@
+<?xml version="1.0" ?>
+<DataFlowResults FileFormatVersion="102" TerminationState="Success">
+ <Results>
+  <Result>
+   <Sink Statement="staticinvoke &lt;android.util.Log: int d(java.lang.String,java.lang.String)&gt;(&quot;Latitude&quot;, $u2)" LineNumber="47" Method="&lt;de.ecspride.LocationLeak2: void onResume()&gt;" MethodSourceSinkDefinition="&lt;android.util.Log: int d(java.lang.String,java.lang.String)&gt;">
+    <AccessPath Value="$u2" Type="java.lang.String" TaintSubFields="true"/>
+   </Sink>
+   <Sources>
+    <Source Statement="lat = virtualinvoke loc.&lt;android.location.Location: double getLatitude()&gt;()" LineNumber="56" Method="&lt;de.ecspride.LocationLeak2: void onLocationChanged(android.location.Location)&gt;" MethodSourceSinkDefinition="&lt;android.location.Location: double getLatitude()&gt;">
+     <AccessPath Value="lat" Type="double" TaintSubFields="true"/>
+     <TaintPath>
+      <PathElement Statement="lat = virtualinvoke loc.&lt;android.location.Location: double getLatitude()&gt;()" Method="&lt;de.ecspride.LocationLeak2: void onLocationChanged(android.location.Location)&gt;">
+       <AccessPath Value="lat" Type="double" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="$u-1 = staticinvoke &lt;java.lang.Double: java.lang.String toString(double)&gt;(lat)" Method="&lt;de.ecspride.LocationLeak2: void onLocationChanged(android.location.Location)&gt;">
+       <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="this.&lt;de.ecspride.LocationLeak2: java.lang.String latitude&gt; = $u-1" Method="&lt;de.ecspride.LocationLeak2: void onLocationChanged(android.location.Location)&gt;">
+       <AccessPath Value="this" Type="de.ecspride.LocationLeak2" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.LocationLeak2: java.lang.String latitude&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="return" Method="&lt;de.ecspride.LocationLeak2: void onLocationChanged(android.location.Location)&gt;">
+       <AccessPath Value="$r0" Type="de.ecspride.LocationLeak2" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.LocationLeak2: java.lang.String latitude&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="virtualinvoke $r0.&lt;de.ecspride.LocationLeak2: void onResume()&gt;()" Method="&lt;dummyMainClass: android.app.Activity dummyMainMethod_de_ecspride_LocationLeak2(android.content.Intent)&gt;">
+       <AccessPath Value="this" Type="de.ecspride.LocationLeak2" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.LocationLeak2: java.lang.String latitude&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="$u2 = this.&lt;de.ecspride.LocationLeak2: java.lang.String latitude&gt;" Method="&lt;de.ecspride.LocationLeak2: void onResume()&gt;">
+       <AccessPath Value="$u2" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="$u-1 = virtualinvoke $u-1.&lt;java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)&gt;($u2)" Method="&lt;de.ecspride.LocationLeak2: void onResume()&gt;">
+       <AccessPath Value="$u-1" Type="java.lang.StringBuilder" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="$u2 = virtualinvoke $u-1.&lt;java.lang.StringBuilder: java.lang.String toString()&gt;()" Method="&lt;de.ecspride.LocationLeak2: void onResume()&gt;">
+       <AccessPath Value="$u2" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="staticinvoke &lt;android.util.Log: int d(java.lang.String,java.lang.String)&gt;(&quot;Latitude&quot;, $u2)" Method="&lt;de.ecspride.LocationLeak2: void onResume()&gt;">
+       <AccessPath Value="$u2" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+     </TaintPath>
+    </Source>
+   </Sources>
+  </Result>
+  <Result>
+   <Sink Statement="staticinvoke &lt;android.util.Log: int d(java.lang.String,java.lang.String)&gt;(&quot;Longtitude&quot;, $u2)" LineNumber="48" Method="&lt;de.ecspride.LocationLeak2: void onResume()&gt;" MethodSourceSinkDefinition="&lt;android.util.Log: int d(java.lang.String,java.lang.String)&gt;">
+    <AccessPath Value="$u2" Type="java.lang.String" TaintSubFields="true"/>
+   </Sink>
+   <Sources>
+    <Source Statement="lon = virtualinvoke loc.&lt;android.location.Location: double getLongitude()&gt;()" LineNumber="57" Method="&lt;de.ecspride.LocationLeak2: void onLocationChanged(android.location.Location)&gt;" MethodSourceSinkDefinition="&lt;android.location.Location: double getLongitude()&gt;">
+     <AccessPath Value="lon" Type="double" TaintSubFields="true"/>
+     <TaintPath>
+      <PathElement Statement="lon = virtualinvoke loc.&lt;android.location.Location: double getLongitude()&gt;()" Method="&lt;de.ecspride.LocationLeak2: void onLocationChanged(android.location.Location)&gt;">
+       <AccessPath Value="lon" Type="double" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="$u-1 = staticinvoke &lt;java.lang.Double: java.lang.String toString(double)&gt;(lon)" Method="&lt;de.ecspride.LocationLeak2: void onLocationChanged(android.location.Location)&gt;">
+       <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="this.&lt;de.ecspride.LocationLeak2: java.lang.String longtitude&gt; = $u-1" Method="&lt;de.ecspride.LocationLeak2: void onLocationChanged(android.location.Location)&gt;">
+       <AccessPath Value="this" Type="de.ecspride.LocationLeak2" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.LocationLeak2: java.lang.String longtitude&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="return" Method="&lt;de.ecspride.LocationLeak2: void onLocationChanged(android.location.Location)&gt;">
+       <AccessPath Value="$r0" Type="de.ecspride.LocationLeak2" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.LocationLeak2: java.lang.String longtitude&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="virtualinvoke $r0.&lt;de.ecspride.LocationLeak2: void onResume()&gt;()" Method="&lt;dummyMainClass: android.app.Activity dummyMainMethod_de_ecspride_LocationLeak2(android.content.Intent)&gt;">
+       <AccessPath Value="this" Type="de.ecspride.LocationLeak2" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.LocationLeak2: java.lang.String longtitude&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="$u2 = this.&lt;de.ecspride.LocationLeak2: java.lang.String longtitude&gt;" Method="&lt;de.ecspride.LocationLeak2: void onResume()&gt;">
+       <AccessPath Value="$u2" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="$u-1 = virtualinvoke $u-1.&lt;java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)&gt;($u2)" Method="&lt;de.ecspride.LocationLeak2: void onResume()&gt;">
+       <AccessPath Value="$u-1" Type="java.lang.StringBuilder" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="$u2 = virtualinvoke $u-1.&lt;java.lang.StringBuilder: java.lang.String toString()&gt;()" Method="&lt;de.ecspride.LocationLeak2: void onResume()&gt;">
+       <AccessPath Value="$u2" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="staticinvoke &lt;android.util.Log: int d(java.lang.String,java.lang.String)&gt;(&quot;Longtitude&quot;, $u2)" Method="&lt;de.ecspride.LocationLeak2: void onResume()&gt;">
+       <AccessPath Value="$u2" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+     </TaintPath>
+    </Source>
+   </Sources>
+  </Result>
+ </Results>
+ <PerformanceData>
+  <PerformanceEntry Name="TotalRuntimeSeconds" Value="1"/>
+  <PerformanceEntry Name="MaxMemoryConsumption" Value="94"/>
+  <PerformanceEntry Name="SourceCount" Value="2"/>
+  <PerformanceEntry Name="SinkCount" Value="2"/>
+ </PerformanceData>
+</DataFlowResults>

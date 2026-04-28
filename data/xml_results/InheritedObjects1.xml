@@ -1,0 +1,32 @@
+<?xml version="1.0" ?>
+<DataFlowResults FileFormatVersion="102" TerminationState="Success">
+ <Results>
+  <Result>
+   <Sink Statement="virtualinvoke sms.&lt;android.telephony.SmsManager: void sendTextMessage(java.lang.String,java.lang.String,java.lang.String,android.app.PendingIntent,android.app.PendingIntent)&gt;(&quot;+49 1234&quot;, null, $u-1, null, null)" LineNumber="27" Method="&lt;de.ecspride.InheritedObjects1: void onCreate(android.os.Bundle)&gt;" MethodSourceSinkDefinition="&lt;android.telephony.SmsManager: void sendTextMessage(java.lang.String,java.lang.String,java.lang.String,android.app.PendingIntent,android.app.PendingIntent)&gt;">
+    <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+   </Sink>
+   <Sources>
+    <Source Statement="$u-1 = virtualinvoke $u0.&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;()" LineNumber="6" Method="&lt;de.ecspride.VarA: java.lang.String getInfo()&gt;" MethodSourceSinkDefinition="&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;">
+     <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+     <TaintPath>
+      <PathElement Statement="$u-1 = virtualinvoke $u0.&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;()" Method="&lt;de.ecspride.VarA: java.lang.String getInfo()&gt;">
+       <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="return $u-1" Method="&lt;de.ecspride.VarA: java.lang.String getInfo()&gt;">
+       <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="virtualinvoke sms.&lt;android.telephony.SmsManager: void sendTextMessage(java.lang.String,java.lang.String,java.lang.String,android.app.PendingIntent,android.app.PendingIntent)&gt;(&quot;+49 1234&quot;, null, $u-1, null, null)" Method="&lt;de.ecspride.InheritedObjects1: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="$u-1" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+     </TaintPath>
+    </Source>
+   </Sources>
+  </Result>
+ </Results>
+ <PerformanceData>
+  <PerformanceEntry Name="TotalRuntimeSeconds" Value="1"/>
+  <PerformanceEntry Name="MaxMemoryConsumption" Value="89"/>
+  <PerformanceEntry Name="SourceCount" Value="1"/>
+  <PerformanceEntry Name="SinkCount" Value="1"/>
+ </PerformanceData>
+</DataFlowResults>
