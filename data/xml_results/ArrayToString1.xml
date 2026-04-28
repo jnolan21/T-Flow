@@ -1,0 +1,34 @@
+<?xml version="1.0" ?>
+<DataFlowResults FileFormatVersion="102" TerminationState="Success">
+ <Results>
+  <Result>
+   <Sink Statement="staticinvoke &lt;android.util.Log: int i(java.lang.String,java.lang.String)&gt;(&quot;DroidBench&quot;, arrayToString)" LineNumber="35" Method="&lt;edu.mit.to_string.MainActivity: void onCreate(android.os.Bundle)&gt;" MethodSourceSinkDefinition="&lt;android.util.Log: int i(java.lang.String,java.lang.String)&gt;">
+    <AccessPath Value="arrayToString" Type="java.lang.String" TaintSubFields="true"/>
+   </Sink>
+   <Sources>
+    <Source Statement="imei = virtualinvoke mgr#5.&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;()" LineNumber="27" Method="&lt;edu.mit.to_string.MainActivity: void onCreate(android.os.Bundle)&gt;" MethodSourceSinkDefinition="&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;">
+     <AccessPath Value="imei" Type="java.lang.String" TaintSubFields="true"/>
+     <TaintPath>
+      <PathElement Statement="imei = virtualinvoke mgr#5.&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;()" Method="&lt;edu.mit.to_string.MainActivity: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="imei" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="array[0] = imei" Method="&lt;edu.mit.to_string.MainActivity: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="array" Type="java.lang.String[]" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="arrayToString = staticinvoke &lt;java.util.Arrays: java.lang.String toString(java.lang.Object[])&gt;(array)" Method="&lt;edu.mit.to_string.MainActivity: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="arrayToString" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="staticinvoke &lt;android.util.Log: int i(java.lang.String,java.lang.String)&gt;(&quot;DroidBench&quot;, arrayToString)" Method="&lt;edu.mit.to_string.MainActivity: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="arrayToString" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+     </TaintPath>
+    </Source>
+   </Sources>
+  </Result>
+ </Results>
+ <PerformanceData>
+  <PerformanceEntry Name="MaxMemoryConsumption" Value="100"/>
+  <PerformanceEntry Name="SourceCount" Value="1"/>
+  <PerformanceEntry Name="SinkCount" Value="1"/>
+ </PerformanceData>
+</DataFlowResults>

@@ -16,5 +16,4 @@ FlowDroid-2.15.1/
 venv/
 .env
 
-data/
 outputs/graphs
