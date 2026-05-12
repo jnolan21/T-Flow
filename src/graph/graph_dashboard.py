@@ -1,12 +1,21 @@
 from pathlib import Path
 import json
 import sys
-from dash import Dash, html, dcc, Output, Input
+from dash import Dash, html, dcc, Output, Input, callback_context, no_update
+from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
+import base64
 import dash_cytoscape as cyto
 from collections import deque
 
-# Paths
+# Paths for imports
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.append(str(PROJECT_ROOT / "src"))
+
+from run_flowdroid import run_flowdroid
+from graph.graph_builder import build_graph, export_json
+from parser.xml_parser import parse_flowdroid_xml
+
 
 # Discover the available graphs in "outputs/graphs"
 GRAPH_DIR = PROJECT_ROOT / "outputs/graphs"
@@ -16,9 +25,6 @@ def get_available_graphs():
     for f in GRAPH_DIR.glob("*_graph.json"):
         graph_options.append(f.stem.replace("_graph", ""))
     return sorted(graph_options)
-
-# Get all the available graphs to display
-AVAILABLE_GRAPHS = get_available_graphs()
 
 
 # Make a JS-safe ID (some of these markers will trigger weird behavior - I found out while tryint to use "toString" as a node name)
@@ -39,146 +45,348 @@ def safe_id(node_id):
 # Initialize app
 app = Dash(__name__)
 
+# App styling! (global css animation)
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>T-Flow</title>
+        {%favicon%}
+        {%css%}
+
+        <style>
+
+            html, body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                width: 100%;
+                background: #020617;
+                overflow: hidden;
+            }
+
+            @keyframes pulseBG {
+                0% { filter: brightness(1); }
+                50% { filter: brightness(1.15); }
+                100% { filter: brightness(1); }
+            }
+
+            @keyframes floatGlow {
+                0% { transform: translateY(0px); }
+                50% { transform: translateY(-6px); }
+                100% { transform: translateY(0px); }
+            }
+
+            @keyframes nodePulse {
+                0% { box-shadow: 0 0 5px rgba(56,189,248,0.2); }
+                50% { box-shadow: 0 0 18px rgba(56,189,248,0.6); }
+                100% { box-shadow: 0 0 5px rgba(56,189,248,0.2); }
+            }
+
+            body {
+                margin: 0;
+                overflow-x: auto;
+                overflow-y: auto;
+                background: transparent;
+            }
+
+        </style>
+
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
+
+
 app.layout = html.Div([
 
-    # Header
-    html.H1("Taint Flow Graph Explorer", style={
-        "textAlign": "center",
-        "marginBottom": "20px"
-    }),
+    dcc.Location(id="url", refresh=False),
     dcc.Store(id="graph-data-store"),
     dcc.Store(id="selected-node"),
 
-    # Main dashboard container
-html.Div([
-
-    # Left: Graph Panel
     html.Div([
-        dcc.Checklist(
-            id="simplify-toggle",
-            options=[{"label": "Show only Source → Sink", "value": "simplify"}],
-            value=[],
-            style={
-                "marginBottom": "10px",
-                "flex": "3",
-                "border": "2px solid #ccc",
-                "borderRadius": "8px",
-                "padding": "10px",
-                "marginRight": "10px",
-            }
-        ),
-        dcc.Dropdown(
-            id="graph-selector",
-            options=[{"label": name, "value": name} for name in AVAILABLE_GRAPHS],
-            value=AVAILABLE_GRAPHS[0] if AVAILABLE_GRAPHS else None,
-            placeholder="Select a program...",
-            style={"marginBottom": "15px"}
-        ),
-        html.H3("Graph View"),
-        cyto.Cytoscape(
-            id="taint-graph",
-            layout={
-                "name": "breadthfirst",
-                "directed": True,
-                "orientation": "horizontal",
-                "spacingFactor": 1.8,
-                "padding": 10,
-                "roots": '[type = "source"]',
-                "animate": False
-            },
-            style={"width": "100%", "height": "700px"},
-            elements=[],
-            stylesheet=[
-                {
-                    "selector": "node",
-                    "style": {
-                        "label": "data(label)",
-                        "font-size": "10px",
-                        "text-wrap": "wrap",
-                        "text-max-width": "120px",
-                        "text-valign": "top",
-                        "text-halign": "left"
-                    }
-                },
-                {"selector": ".source", "style": {"background-color": "#FF4136", "label": "data(label)"}},
-                {"selector": ".sink", "style": {"background-color": "#0074D9", "label": "data(label)"}},
-                {"selector": ".intermediate", "style": {"background-color": "#2ECC40", "label": "data(label)"}},
-                {"selector": "edge", "style": {
-                    "line-color": "#888",
-                    "target-arrow-color": "#888",
-                    "target-arrow-shape": "triangle",
-                    "arrow-scale": 1.5,
-                    "curve-style": "bezier"
-                    }
-                },
-                {"selector": "edge.highlighted", "style": {
-                    "line-color": "#FF4136",
-                    "target-arrow-color": "#FF4136",
-                    "width": 4
-                }},
-                {"selector": "node.highlighted", "style": {
-                    "opacity": 1,
-                    "border-width": 2,
-                    "border-color": "#FF4136"
-                }},
-                {"selector": ".faded", "style": {"opacity": 0.2}},
-            ]
-        )
-    ], style={
-        "flex": "3",
-        "border": "2px solid #ccc",
-        "borderRadius": "8px",
-        "padding": "10px",
-        "marginRight": "10px",
-        "backgroundColor": "#ffffff"
-    }),
 
-    # Right: Info Panel
-    html.Div([
+        # HEADER
         html.Div([
-            html.H3("Node Details"),
-            html.Div(
-                id="node-data",
+            html.H1("T-Flow: Taint Flow Explorer",
                 style={
-                    "minHeight": "150px",
+                    "color": "#E0F2FE",
+                    "letterSpacing": "4px",
+                    "textShadow": "0 0 20px rgba(56,189,248,0.6)",
+                    "animation": "floatGlow 4s ease-in-out infinite"
+                }
+            ),
+
+            html.Div("Interactive visualization of how data moves through programs",
+                     style={"color": "#94A3B8"})
+        ], style={"marginBottom": "12px"}),
+
+        # Description of our app
+        html.Div([
+            html.H4("What is T-Flow?", style={"color": "#E0F2FE", "marginBottom": "5px"}),
+
+            html.P(
+                "T-Flow visualizes how sensitive data moves through a program. "
+                "It converts static taint analysis output into an interactive graph "
+                "so you can explore how data flows from sources (like user input or device info) "
+                "to sinks (like network or file output).",
+                style={"color": "#94A3B8", "fontSize": "12px", "lineHeight": "1.4"}
+            ),
+
+            html.P(
+                "Click nodes to inspect code, trace paths, and identify potential data leaks.",
+                style={"color": "#94A3B8", "fontSize": "12px"}
+            ),
+
+        ], style={
+            "color": "#94A3B8",
+            "marginBottom": "10px",
+            "paddingleft": "4px",
+            "border": "1px solid rgba(56,189,248,0.2)",
+            "borderRadius": "8px",
+            "background": "rgba(2,6,23,0.4)"
+        }),
+
+        # MAIN CONTENT
+        html.Div([
+
+            # LEFT PANEL
+            html.Div([
+
+                html.Div([
+                    dcc.Checklist(
+                        id="simplify-toggle",
+                        options=[
+                            {
+                                "label": " Filter Intermediate Nodes (Source -> Sink)",
+                                "value": "simplify"
+                            }
+                        ],
+                        value=[],
+                        labelStyle={
+                            "color": "#BAE6FD",
+                            "fontSize": "11px",
+                            "display": "inline-block",
+                            "cursor": "pointer"
+                        },
+                        inputStyle={
+                            "marginRight": "6px"
+                        }
+                    )
+                ]),
+
+                dcc.Upload(
+                    id="upload-apk",
+                    children=html.Button("Select an .apk to analyze",
+                        style={
+                            "backgroundColor": "#0EA5E9",
+                            "color": "black",
+                            "border": "none",
+                            "padding": "4px 8px",
+                            "fontSize": "11px"
+                        }),
+                    multiple=False,
+                    style={"marginBottom": "4px"}
+                ),
+
+                html.Div(id="upload-status", style={"color": "#A5F3FC"}),
+
+                html.Div([
+                    # Select a graph
+                    dcc.Dropdown(
+                        id="graph-selector",
+                        placeholder="Graph",
+                        style={"fontSize": "11px", "flex": 1}
+                    ),
+                    # Delete a graph
+                    html.Button(
+                        "Del",
+                        id="delete-graph-btn",
+                        style={
+                            "backgroundColor": "#EF4444",
+                            "color": "white",
+                            "border": "none",
+                            "padding": "4px 8px",
+                            "fontSize": "11px"
+                        }
+                    )
+                ], style={
+                    "display": "flex",
+                    "gap": "6px",
+                    "alignItems": "center"
+                }),
+
+                html.H3("Flow Map", style={"color": "#E0F2FE"}),
+                html.P(
+                    "Nodes represent program elements (sources, variables, functions, sinks). "
+                    "Edges represent how data flows between them.",
+                    style={"color": "#94A3B8", "fontSize": "11px", "marginTop": "2px", "marginBottom": "10px"}
+                ),
+
+                cyto.Cytoscape(
+                    id="taint-graph",
+                    layout={
+                        "name": "breadthfirst",
+                        "directed": True,
+                        "orientation": "horizontal",
+                        "spacingFactor": 1,
+                        "padding": 10,
+                        "roots": '[type = "source"]',
+                        "animate": False
+                    },
+                    style={
+                        "flex": "1 1 auto",
+                        "width": "100%",
+                        "minHeight": 0,
+                        "height": "100%",
+                        "backgroundColor": "#020617",
+                        "border": "1px solid rgba(56,189,248,0.2)",
+                        "boxShadow": "0 0 40px rgba(56,189,248,0.1)",
+                        "animation": "nodePulse 6s ease-in-out infinite",
+                    },
+                    elements=[],
+                    stylesheet=[
+                        {"selector": "node", "style": {
+                            "label": "data(label)",
+                            "color": "#E0F2FE",
+                            "font-size": "10px",
+                            "text-outline-width": 2,
+                            "text-outline-color": "#020617",
+                            "background-opacity": 0.9,
+                            "border-width": 2,
+                            "border-color": "#38BDF8",
+                            "transition-property": "background-color, border-color, box-shadow",
+                            "transition-duration": "0.3s",
+                            "width": 18,
+                            "height": 18
+                        }},
+                        {"selector": ".source", "style": {"background-color": "#38BDF8"}},
+                        {"selector": ".sink", "style": {"background-color": "#F97316"}},
+                        {"selector": ".intermediate", "style": {"background-color": "#64748B"}},
+                        {"selector": "edge", "style": {
+                            "line-color": "#38BDF8",
+                            "target-arrow-color": "#F97316",
+                            "width": 1.5,
+                            "curve-style": "bezier",
+                            "opacity": 0.5
+                        }},
+                        {"selector": ".highlighted", "style": {
+                            "border-width": 3,
+                            "border-color": "#F97316",
+                            "shadow-blur": 25,
+                            "shadow-color": "#38BDF8",
+                            "shadow-opacity": 0.9,
+                            "animation": "nodePulse 1.8s infinite"
+                        }},
+                    ]
+                ),
+
+                # Legend to describe the graph
+                html.Div([
+                    html.H4("Legend", style={"color": "#E0F2FE", "marginTop": "10px"}),
+
+                    html.P("Source: entry point of data (e.g., user input, device info)",
+                        style={"color": "#38BDF8", "fontSize": "11px"}),
+
+                    html.P("Intermediate: transformed or propagated data",
+                        style={"color": "#94A3B8", "fontSize": "11px"}),
+
+                    html.P("Sink: sensitive destination (network, file, etc.)",
+                        style={"color": "#F97316", "fontSize": "11px"}),
+
+                    html.P("Highlighted: nodes involved in selected path",
+                        style={"color": "#E0F2FE", "fontSize": "11px"}),
+                ], style={
+                    "marginTop": "10px",
+                    "padding": "8px",
+                    "borderTop": "1px solid rgba(56,189,248,0.2)"
+                }),
+
+            ], style={
+                "flex": 4,
+                "minWidth": 0,
+                "display": "flex",
+                "flexDirection": "column",
+                "overflow": "hidden",
+                "gap": "6px",
+                "padding": "8px",
+                "background": "rgba(17,24,39,0.4)",
+                "backdropFilter": "blur(10px)",
+                "border": "1px solid rgba(56,189,248,0.15)",
+                "borderRadius": "10px",
+                "boxShadow": "0 0 30px rgba(56,189,248,0.08)"
+                }
+            ),
+
+            # RIGHT PANEL
+            html.Div([
+
+                html.Div([
+                    html.H3("Node Data", style={"color": "#E0F2FE"}),
+                    html.Div(id="node-data"),
+
+                    html.H3("Traversal Path", style={"color": "#E0F2FE"}),
+                    html.Div(id="path-data", style={"color": "white"}),
+
+                    html.H3("System Stats", style={"color": "#E0F2FE"}),
+                    html.Div(id="graph-stats", style={"color": "white"})
+
+                ], style={
+                    "flex": 1,
+                    "overflowY": "auto",
+                    "paddingRight": "6px",
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "gap": "10px",
+                    "minHeight": 0
+                })
+
+            ], style={
+                    "flex": 1,
+                    "minWidth": 0,
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "overflow": "hidden",
                     "padding": "10px",
-                    "backgroundColor": "#fafafa"
+                    "background": "rgba(2,6,23,0.6)",
+                    "backdropFilter": "blur(12px)",
+                    "border": "1px solid rgba(249,115,22,0.12)",
+                    "borderRadius": "10px",
+                    "boxShadow": "0 0 30px rgba(249,115,22,0.05)"
                 }
             )
+
         ], style={
-            "border": "2px solid #ccc",
-            "borderRadius": "8px",
-            "padding": "10px",
-            "marginBottom": "10px"
-        }),
-        html.Div([
-            html.H3("Path View"),
-            html.Div(id="path-data")
-        ], style={
-            "border": "2px solid #ccc",
-            "borderRadius": "8px",
-            "padding": "10px",
-            "marginBottom": "10px"
-        }),
-        html.Div([
-            html.H3("Graph Stats"),
-            html.Div(id="graph-stats")
-        ], style={
-            "border": "2px solid #ccc",
-            "borderRadius": "8px",
-            "padding": "10px"
+            "display": "flex",
+            "flex": 1,
+            "gap": "12px",
+            "minHeight": 0,
+            "minWidth": 0,
+            "width": "100%"
         })
 
     ], style={
-        "flex": "1",
+        "position": "relative",
+        "zIndex": 10,
+        "height": "100vh",
+        "width": "100vw",
         "display": "flex",
-        "flexDirection": "column"
+        "flexDirection": "column",
+        "padding": "16px",
+        "boxSizing": "border-box",
+        "flexDirection": "column",
+        "fontFamily": "monospace",
+        "background": "transparent",
+        "animation": "pulseBG 12s ease-in-out infinite"
     })
-
-], style={
-    "display": "flex",
-    "padding": "10px"
-})
 ])
 
 @app.callback(
@@ -189,7 +397,7 @@ html.Div([
 def display_path(selected_node, graph_data):
     """Calculate the path in the graph for a selected node to display in the info panel"""
     if not selected_node or not graph_data:
-        return "Click a node to see its full path."
+        return html.Pre("Click a node to see its full path.", style={"color": "white"})
 
     # Build adjacency dictionaries
     adj_forward = {}
@@ -268,6 +476,68 @@ def display_graph_stats(graph_data):
         html.P(f"Sinks: {num_sinks}")
     ])
 
+# Dynamically load the available graphs to display in the dropdown for the user to view
+"""
+@app.callback(
+    Output("graph-selector", "options"),
+    Output("graph-selector", "value"),
+    Input("url", "pathname")
+)
+def refresh_graph_dropdown(_):
+    graphs = get_available_graphs()
+
+    options = [
+        {"label": name, "value": name}
+        for name in graphs
+    ]
+
+    value = graphs[0] if graphs else None
+
+    return options, value
+
+# Delete the selected graph
+@app.callback(
+    Output("graph-selector", "options"),
+    Output("graph-selector", "value"),
+    Output("graph-data-store", "data", allow_duplicate=True),
+    Input("delete-graph-btn", "n_clicks"),
+    State("graph-selector", "value"),
+    prevent_initial_call=True
+)
+def delete_graph(n_clicks, selected_name):
+    if not selected_name:
+        graphs = get_available_graphs()
+        return (
+            [{"label": g, "value": g} for g in graphs],
+            None,
+            None
+        )
+    try:
+        graph_file = GRAPH_DIR / f"{selected_name}_graph.json"
+        if graph_file.exists():
+            graph_file.unlink()  # Delete the graph file (i.e. ArrayToString1_graph.json)
+
+        print(f"[DELETE] Removed graph: {graph_file}")
+
+        # Refresh the dropdown list of graphs
+        graphs = get_available_graphs()
+        options = [{"label": g, "value": g} for g in graphs]
+
+        # Pick a new default if available
+        new_value = graphs[0] if graphs else None
+        return options, new_value, None
+
+    except Exception as e:
+        print("[DELETE ERROR]", e)
+        graphs = get_available_graphs()
+        return (
+            [{"label": name, "value": name} for name in graphs],
+            None,
+            None
+        )
+
+"""
+    
 
 # Load JSON graph into Store based on which graph the user selects
 @app.callback(
@@ -297,6 +567,124 @@ def store_selected_node(node_data):
     if not node_data:
         return None
     return safe_id(node_data["id"])
+
+
+# Callback that manages graph state:
+#   1) Refreshes the graph
+#   2) Delete graphs
+#   3) Handle .apk file uploads and graph creation
+@app.callback(
+    Output("graph-selector", "options"),
+    Output("graph-selector", "value"),
+    Output("upload-status", "children"),
+    Input("url", "pathname"),
+    Input("delete-graph-btn", "n_clicks"),
+    Input("upload-apk", "contents"),
+    State("graph-selector", "value"),
+    State("upload-apk", "filename"),
+    prevent_initial_call=False
+)
+def manage_graphs(pathname, delete_clicks, upload_contents,
+                  selected_graph, upload_filename):
+
+    ctx = callback_context
+
+    if not ctx.triggered:
+        trigger = "initial"
+    else:
+        trigger = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    # -------------------------
+    # INITIAL PAGE LOAD
+    # -------------------------
+    if trigger in ["url", "initial"]:
+        graphs = get_available_graphs()
+
+        options = [{"label": g, "value": g} for g in graphs]
+        value = graphs[0] if graphs else None
+
+        return options, value, "Ready."
+
+    # -------------------------
+    # DELETE GRAPH
+    # -------------------------
+    elif trigger == "delete-graph-btn":
+
+        if selected_graph:
+            graph_file = GRAPH_DIR / f"{selected_graph}_graph.json"
+
+            if graph_file.exists():
+                graph_file.unlink()
+
+        graphs = get_available_graphs()
+
+        options = [{"label": g, "value": g} for g in graphs]
+        value = graphs[0] if graphs else None
+
+        return options, value, f"Deleted graph: {selected_graph}"
+
+    # -------------------------
+    # UPLOAD APK
+    # -------------------------
+    elif trigger == "upload-apk":
+
+        if upload_contents is None:
+            raise PreventUpdate
+
+        try:
+            content_type, content_string = upload_contents.split(',')
+            decoded = base64.b64decode(content_string)
+
+            upload_dir = PROJECT_ROOT / "data/uploads"
+            upload_dir.mkdir(parents=True, exist_ok=True)
+
+            upload_path = upload_dir / upload_filename
+
+            with open(upload_path, "wb") as f:
+                f.write(decoded)
+
+            apk_name = Path(upload_filename).stem
+
+            # Run FlowDroid
+            run_flowdroid(upload_path)
+
+            # Parse XML
+            xml_path = PROJECT_ROOT / "data/xml_results" / f"{apk_name}.xml"
+            parsed_data = parse_flowdroid_xml(xml_path)
+
+            # Build Graph
+            G = build_graph(parsed_data)
+
+            output_dir = PROJECT_ROOT / "outputs/graphs"
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            graph_output = output_dir / f"{apk_name}_graph.json"
+
+            export_json(G, graph_output)
+
+            graphs = get_available_graphs()
+
+            options = [{"label": g, "value": g} for g in graphs]
+
+            return (
+                options,
+                apk_name,
+                f"Upload complete: {apk_name}"
+            )
+
+        except Exception as e:
+
+            graphs = get_available_graphs()
+
+            options = [{"label": g, "value": g} for g in graphs]
+
+            return (
+                options,
+                selected_graph,
+                f"Upload failed: {str(e)}"
+            )
+
+    return no_update, no_update, no_update
 
 
 # Build Cytoscape elements from Store
@@ -491,19 +879,19 @@ def build_elements(graph_data, selected_node, simplify_mode):
 def display_node_info(node_data):
     """Display the information of a node when it's clicked"""
     if not node_data:
-        return html.Div("Click a node to see details.")
+        return html.Div("Click a node to see details.", style={"color": "white"})
 
     children = [
-        html.H4(node_data.get("label", "Unknown")),
+        html.H4(node_data.get("label", "Unknown"), style={"color": "white"}),
         html.P([
             html.B("Type: "), node_data.get("type", "unknown")
-        ]),
+        ], style={"color": "white"}),
         html.P([
             html.B("Class: "), node_data.get("class", "N/A")
-        ]),
+        ], style={"color": "white"}),
         html.P([
             html.B("Method: "), node_data.get("method", "N/A")
-        ]),
+        ], style={"color": "white"}),
     ]
 
     # Only show line if it's actually present (i.e. not None)
@@ -511,20 +899,35 @@ def display_node_info(node_data):
         children.append(
             html.P([
                 html.B("Line: "), str(node_data["line"])
-            ])
+            ], style={"color": "white"})
         )
 
     children.extend([
-        html.H5("Code"),
+        html.H5("Code", style={"color": "white"}),
         html.Pre(node_data.get("code") or "N/A", style={
+            "color": "black",
             "background": "#f4f4f4",
-            "padding": "10px"
+            "padding": "10px",
+            "fontSize": "12px",
+            "whiteSpace": "pre-wrap",
+            "wordBreak": "break-word",
+            "overflowWrap": "anywhere",
+            "maxWidth": "100%",
+            "overflowX": "auto",
+            "borderRadius": "6px"
         }),
-        html.H5("Raw IR"),
+        html.H5("Raw IR", style={"color": "white"}),
         html.Pre(node_data.get("raw") or "N/A", style={
+            "color": "black",
             "background": "#eee",
             "padding": "10px",
-            "fontSize": "12px"
+            "fontSize": "12px",
+            "whiteSpace": "pre-wrap",
+            "wordBreak": "break-word",
+            "overflowWrap": "anywhere",
+            "maxWidth": "100%",
+            "overflowX": "auto",
+            "borderRadius": "6px"
         })
     ])
 

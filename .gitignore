@@ -9,9 +9,6 @@ __pycache__/
 sootOutput/
 outputs/
 
-# FlowDroid binary
-FlowDroid-2.15.1/
-
 # Virtual environments
 venv/
 .env

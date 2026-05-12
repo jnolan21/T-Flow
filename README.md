@@ -1,28 +1,16 @@
-Purpose of each file:
+## Setup
 
-data/xml_results/*.xml
-    - store FlowDroid XML outputs
+1. Install [Git LFS](https://git-lfs.com/) then clone normally:
+```bash
+   git lfs install
+   git clone <repo-url>
+```
 
-src/run_flowdroid.py
-    - used to run FlowDroid and save the XML results file
+2. Install Python dependencies:
+```bash
+   pip install -r requirements.txt
+```
 
-src/parser/xml_parser.py
-    - parses FlowDroid XML -> structured Python dict
+3. Make sure Java 11+ is installed (`java -version`)
 
-src/graph/graph_builder.py
-    - takes parsed dict -> builds NetworkX graph -> exports JSON
-
-src/graph/graph_dashboard.py
-    - front-end file for the dashboard
-
-src/utils/file_io.py
-    - optional helpers: read log, write JSON files, path handling
-
-outputs/graphs/*.json
-    - exported graph data for visualization dashboard
-
-tests/test_parser.py
-    - test our parser and graph builder against sample logs
-
-requirements.txt
-    - track all Python packages we use
+4. Set your Android SDK path in `src/run_flowdroid.py` if it differs from `~/Library/Android/sdk/platforms`

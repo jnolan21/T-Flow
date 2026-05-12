@@ -27,7 +27,8 @@
   </Result>
  </Results>
  <PerformanceData>
-  <PerformanceEntry Name="MaxMemoryConsumption" Value="100"/>
+  <PerformanceEntry Name="TotalRuntimeSeconds" Value="1"/>
+  <PerformanceEntry Name="MaxMemoryConsumption" Value="58"/>
   <PerformanceEntry Name="SourceCount" Value="1"/>
   <PerformanceEntry Name="SinkCount" Value="1"/>
  </PerformanceData>

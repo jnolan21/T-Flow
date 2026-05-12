@@ -1,0 +1,83 @@
+.class public data.examples.LocationLeak2 extends android.app.Activity implements android.location.LocationListener
+{
+    .field private java.lang.String latitude
+    .field private java.lang.String longtitude
+
+    .method public void <init>()
+    {
+        r0 := @this: data.examples.LocationLeak2;
+        specialinvoke r0.<android.app.Activity: void <init>()>();
+        r0.latitude = "";
+        r0.longtitude = "";
+        return;
+    }
+
+    .method protected void onCreate(android.os.Bundle)
+    {
+        r0 := @this: data.examples.LocationLeak2;
+        r1 := @parameter0: android.os.Bundle;
+        specialinvoke r0.<android.app.Activity: void onCreate(android.os.Bundle)>(r1);
+        r2 = staticinvoke <data.examples.R$layout: int activity_location_leak2>;
+        virtualinvoke r0.<android.app.Activity: void setContentView(int)>(r2);
+        r3 = "location";
+        r4 = virtualinvoke r0.<android.app.Activity: java.lang.Object getSystemService(java.lang.String)>(r3);
+        r5 = (android.location.LocationManager) r4;
+        r6 = "gps";
+        r7 = 5000L;
+        r9 = 10.0f;
+        virtualinvoke r5.<android.location.LocationManager: void requestLocationUpdates(java.lang.String,long,float,android.location.LocationListener)>(r6, r7, r9, r0);
+        return;
+    }
+
+    .method protected void onResume()
+    {
+        r0 := @this: data.examples.LocationLeak2;
+        specialinvoke r0.<android.app.Activity: void onResume()>();
+        r1 = r0.latitude;
+        r2 = "Latitude: ";
+        r3 = virtualinvoke r2.<java.lang.String: java.lang.String concat(java.lang.String)>(r1);
+        staticinvoke <android.util.Log: int d(java.lang.String,java.lang.String)>("Latitude", r3);
+        r4 = r0.longtitude;
+        r5 = "Longtitude: ";
+        r6 = virtualinvoke r5.<java.lang.String: java.lang.String concat(java.lang.String)>(r4);
+        staticinvoke <android.util.Log: int d(java.lang.String,java.lang.String)>("Longtitude", r6);
+        return;
+    }
+
+    .method public void onLocationChanged(android.location.Location)
+    {
+        r0 := @this: data.examples.LocationLeak2;
+        r1 := @parameter0: android.location.Location;
+        r2 = virtualinvoke r1.<android.location.Location: double getLatitude()>();
+        r3 = virtualinvoke r1.<android.location.Location: double getLongitude()>();
+        r4 = staticinvoke <java.lang.Double: java.lang.String toString(double)>(r2);
+        r0.latitude = r4;
+        r5 = staticinvoke <java.lang.Double: java.lang.String toString(double)>(r3);
+        r0.longtitude = r5;
+
+        return;
+    }
+
+    .method public void onProviderDisabled(java.lang.String)
+    {
+        r0 := @this: data.examples.LocationLeak2;
+        r1 := @parameter0: java.lang.String;
+        return;
+    }
+
+    .method public void onProviderEnabled(java.lang.String)
+    {
+        r0 := @this: data.examples.LocationLeak2;
+        r1 := @parameter0: java.lang.String;
+        return;
+    }
+
+    .method public void onStatusChanged(java.lang.String, int, android.os.Bundle)
+    {
+        r0 := @this: data.examples.LocationLeak2;
+        r1 := @parameter0: java.lang.String;
+        r2 := @parameter1: int;
+        r3 := @parameter2: android.os.Bundle;
+        return;
+    }
+}

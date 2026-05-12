@@ -23,11 +23,66 @@ def stable_id(stmt: str) -> str:
 # Regex that matches method calls like:
 # virtualinvoke obj.<Class: type method(...)>(args)
 METHOD_CALL_RE = re.compile(
-    r'(virtualinvoke|staticinvoke)\s+<?([^:]+):\s+([^ ]+)\s+(\w+)\((.*?)\)>?\((.*)\)'
+    r'(virtualinvoke|staticinvoke|specialinvoke|interfaceinvoke)\s+<?([^:]+):\s+([^ ]+)\s+(\w+)\((.*?)\)>?\((.*)\)'
 )
 # Regex that matches method calls like:
 # $u2 = something
 ASSIGN_RE = re.compile(r'^(.+?)\s*=\s*(.*)$')
+
+
+def parse_invoke_expr(expr: str, var_map: dict) -> str:
+    """
+    Converts FlowDroid invoke expressions into readable Java-like code.
+    Handles:
+    - virtualinvoke
+    - staticinvoke
+    - specialinvoke
+    - interfaceinvoke
+    Example inputs and outputs:
+        virtualinvoke r0.<java.lang.String: int length()>() -> r0.length()
+        staticinvoke <java.util.Arrays: java.lang.String toString(java.lang.Object[])>(arr) -> Arrays.toString(arr)
+        specialinvoke r0.<Location: void <init>(java.lang.String)>("123") -> new Location("123")
+        interfaceinvoke txt.<Editable: java.lang.String toString()>() -> txt.toString()
+    """
+    # Try to match invoke expression
+    m = METHOD_CALL_RE.search(expr)
+    # If expression is not an invoke, resolve it like normal
+    if not m:
+        return resolve_var(expr, var_map)
+    
+    # Extract the invoke components
+    invoke_type, receiver, cls, ret_type, method, sig_args, call_args = m.groups()
+
+    # Resolve the receiver variable (ex. $u0 -> user)
+    receiver = resolve_var(receiver, var_map)
+
+    # Remove all compiler noise (ex. passwordText#7 -> passwordText)
+    receiver = re.sub(r'#\d+', '', receiver)
+
+    # Resolve all method arguments
+    args = []
+    if call_args.strip():
+        for arg in call_args.split(","):
+            arg = arg.strip()
+            # Resolve any temporary variables (ex. $u1 -> passwordText.getText())
+            arg = resolve_var(arg.strip(), var_map)
+            args.append(arg)
+    # Convert the args list into a comma separated string
+    args_str = ", ".join(args)
+
+    # Extract the simple class name (ex. java.util.Arrays -> Arrays)
+    class_name = cls.split(".")[-1]
+
+    # Handle constructors (ex. specialinvoke r0.<User: void <init>(String)>("jnolan1") -> new User("jnolan1"))
+    if method == "<init>":
+        return f"new {class_name}({args_str})"
+
+    # Handle static invokes (ex. Arrays.toString(arr))
+    if invoke_type == "staticinvoke":
+        return f"{class_name}.{method}({args_str})"
+
+    # Handle /special/interface invokes (ex. passwordText.getText())
+    return f"{receiver}.{method}({args_str})"
 
 
 def extract_source_line(stmt: str) -> str:
@@ -47,7 +102,7 @@ def extract_source_line(stmt: str) -> str:
         return stmt
 
     # Extract parts from regex:
-    # invoke_type = virtualinvoke / staticinvoke
+    # invoke_type = virtualinvoke / staticinvoke / specialinvoke
     # cls = class name (android.location.Location)
     # ret = return type (double, String, etc.)
     # method = method name (getLongitude)
@@ -58,8 +113,9 @@ def extract_source_line(stmt: str) -> str:
     # Step 2: Convert the full JVM type name into a simple Java type
     ret = ret.split(".")[-1]
 
-    # Step 3: Extrzct the left-hand side variable (e.g. lon in LocationLeak1)
+    # Step 3: Extract the left-hand side variable (e.g. lon in LocationLeak1)
     lhs = stmt.split("=")[0].strip()
+    lhs = lhs.split("#")[0]
 
     # Step 3: Try to guess the object (receiver) calling the method
     # Example: loc.<Location: ...>
@@ -100,10 +156,14 @@ def extract_sink_line(stmt: str, var_map: dict) -> str:
     class_name = cls.split(":")[0].split(".")[-1]
 
     # Step 3: Resolve variables inside arguments (i.e. Log.d("Longitude", $u2) -> Log.d("Longitude", longitude))
-    resolved_args = resolve_var(args, var_map)
+    # resolved_args = resolve_var(args, var_map)
+    resolved_args = ", ".join(
+    resolve_var(a.strip(), var_map)
+    for a in args.split(",") if a.strip())
 
     # Step 4: Build simplified sink call
     # We reuse original arguments (important for our taint tracking)
+    return f"{class_name}.{method}({resolved_args})".replace("staticinvoke ", "").replace("virtualinvoke ", "")
     return f"{class_name}.{method}({resolved_args})"
 
 
@@ -148,11 +208,25 @@ def resolve_var(expr: str, var_map: dict) -> str:
 
     expr = expr.strip()
 
+    # Remove '#' from any IR variable (i.e., longitude#3 -> longitude)
+    # Only remove it from SSA suffixes though, not IR variables
+    expr = re.sub(r'#\d+', '', expr)
+
     visited = set()
 
+    """
     while expr in var_map and expr not in visited:
         visited.add(expr)
         expr = var_map[expr]
+    """
+    while expr in var_map and expr not in visited:
+        visited.add(expr)
+        nxt = var_map[expr]
+        if nxt == expr:
+            break
+        expr = nxt
+
+    expr = expr.replace("staticinvoke ", "")
 
     return expr
 
@@ -174,6 +248,10 @@ def update_var_map(stmt: str, var_map: dict):
     lhs, rhs = stmt.split("=", 1)
     lhs, rhs = lhs.strip(), rhs.strip()
 
+    # Remove any "#" suffixes in the lhs and rhs ONLY IF they are not IR variablesl ike $u-1
+    lhs = re.sub(r'#\d+', '', lhs)
+    rhs = re.sub(r'#\d+', '', rhs)
+
     resolved_rhs = resolve_var(rhs, var_map)
 
     #var_map[lhs] = resolved_rhs
@@ -185,9 +263,18 @@ def update_var_map(stmt: str, var_map: dict):
     if m:
         invoke_type, cls, ret, method, sig, args = m.groups()
 
-        # Handle staticinvoke statements
+        # Handle staticinvoke and specialinvoke statements
         if invoke_type == "staticinvoke":
             expr = parse_staticinvoke(cls, method, args, var_map)
+        if invoke_type == "specialinvoke":
+            # Check if the specialinvoke is a "this." call like in "PrivateDataLeak1" to produce -> this.getPassword()
+            receiver_match = re.search(r'([\w$#]+)\.<', rhs)
+            receiver = receiver_match.group(1).split("#")[0] if receiver_match else ""
+            if receiver == "this":
+                args_resolved = resolve_var(args, var_map) if args.strip() else ""
+                expr = f"this.{method}({args_resolved})"
+            else:
+                expr = parse_staticinvoke(cls, method, args, var_map)
         
         else:
             # Extract the receiver (i.e. loc.<...> -> loc)
@@ -234,9 +321,21 @@ def reconstruct_semantic(stmt: str, var_map: dict) -> str:
         args = [arg.replace('"', "").strip() for arg in args]
         args_resolved = []
         for arg in args:
+            print("ARG:", arg)
             if '$' in arg:
-                arg = var_map[arg]
+                arg = var_map.get(arg, arg)
+            # If a resolved arg contains access$, resolve it to a field name via ret0
+            if "access$" in arg:
+                ret0 = var_map.get('ret0', '')
+                field_match = re.search(r'<[^:]+:\s*[^\s>]+\s+(\w+)>', ret0)
+                if field_match:
+                    arg = field_match.group(1)
+            # Handle args like "<de.ecspride.Button1: java.lang.String imei>" -> imei
+            elif "<" in arg and ">":
+                arg = arg.split(" ")[-1].strip(">")
+
             args_resolved.append(arg)
+            print("ARGS RESOLKVED:", args_resolved)
 
         # Make sure non-variable, non-numeric args are surrounded in quotes, variable args are not
         def is_number(s):
@@ -256,6 +355,7 @@ def reconstruct_semantic(stmt: str, var_map: dict) -> str:
             instance = instance_invoke.group(1)
             return f"{instance}.{method}({", ".join(args_resolved)})"
         
+        print("YOOOO:", f"{class_name}.{method}({", ".join(args_resolved)})")
         return f"{class_name}.{method}({", ".join(args_resolved)})"
 
     # Assignment
@@ -626,7 +726,7 @@ def process_path(raw_path):
         # Detect real assignments only
         lhs_match = ASSIGN_RE.search(stmt)
 
-        if not lhs_match:
+        if not lhs_match or "#" in lhs_match.group(1):
             continue
 
         raw_lhs = lhs_match.group(1)
@@ -635,6 +735,12 @@ def process_path(raw_path):
 
         # Extract lhs field (i.e. $u0.<Class: type field> -> field)
         lhs = extract_last_field(raw_lhs)
+
+        # Preserve "this." in the lhs if it's something like this.<Class: type field> = ...
+        lhs_display = lhs
+        if raw_lhs.startswith("this.") or raw_lhs == "this":
+            lhs_display = f"this.{lhs}"
+
         # Skip if lhs of resolved statment = "this"
         if "this" == lhs:
             continue
@@ -673,14 +779,14 @@ def process_path(raw_path):
                 while "$" in rhs and rhs in var_map:
                     rhs = var_map[rhs]
                     print("new RHS!:", rhs)
-                label = f"{lhs} = {rhs}"
+                label = f"{lhs_display} = {rhs}"
                 var_map[lhs] = rhs
             elif lhs in var_map:
-                label = f"{lhs} = {var_map[lhs]}"
+                label = f"{lhs_display} = {var_map[lhs]}"
             elif resolved:
-                label = f"{lhs} = {resolved}"
+                label = f"{lhs_display} = {resolved}"
             else:
-                label = f"{lhs} = {rhs}"
+                label = f"{lhs_display} = {rhs}"
             print("LABEL:", label)
 
         #print("label:", label)
@@ -695,7 +801,7 @@ def process_path(raw_path):
                 # Source already added
                 processed_nodes.append((
                     stable_id(label),
-                    label,
+                    extract_source_line(label),
                     "intermediate",
                     stmt,
                     None,
@@ -720,12 +826,13 @@ def process_path(raw_path):
     # ---- SINK ----
     sink_stmt = raw_path["sink"].get("Statement")
     sink_label = reconstruct_semantic(sink_stmt, var_map)
+    sink_label = extract_source_line(sink_label)
     # Get the method and class in which this line occurred
     class_name, method_name = parse_method_signature(elem.get("method"))
 
 
     processed_nodes.append((
-        stable_id(sink_label),
+        stable_id(f"{sink_label}:{raw_path["sink"].get("LineNumber")}:{class_name}:{method_name}"),
         sink_label,
         "sink",
         sink_stmt,

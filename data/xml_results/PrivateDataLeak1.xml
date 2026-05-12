@@ -1,0 +1,189 @@
+<?xml version="1.0" ?>
+<DataFlowResults FileFormatVersion="102" TerminationState="Success">
+ <Results>
+  <Result>
+   <Sink Statement="virtualinvoke smsmanager.&lt;android.telephony.SmsManager: void sendTextMessage(java.lang.String,java.lang.String,java.lang.String,android.app.PendingIntent,android.app.PendingIntent)&gt;(&quot;+49 1234&quot;, null, message, null, null)" LineNumber="54" Method="&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;" MethodSourceSinkDefinition="&lt;android.telephony.SmsManager: void sendTextMessage(java.lang.String,java.lang.String,java.lang.String,android.app.PendingIntent,android.app.PendingIntent)&gt;">
+    <AccessPath Value="message" Type="java.lang.String" TaintSubFields="true"/>
+   </Sink>
+   <Sources>
+    <Source Statement="passwordText#7 = virtualinvoke this.&lt;de.ecspride.PrivateDateLeakage: android.view.View findViewById(int)&gt;(2131165185)" LineNumber="36" Category="Password Input" Method="&lt;de.ecspride.PrivateDateLeakage: void onRestart()&gt;">
+     <AccessPath Value="passwordText#7" Type="android.widget.TextView" TaintSubFields="true">
+      <Fields>
+       <Field Value="&lt;android.widget.TextView: android.text.Editable content&gt;" Type="android.text.Editable"/>
+      </Fields>
+     </AccessPath>
+     <TaintPath>
+      <PathElement Statement="passwordText#7 = virtualinvoke this.&lt;de.ecspride.PrivateDateLeakage: android.view.View findViewById(int)&gt;(2131165185)" Method="&lt;de.ecspride.PrivateDateLeakage: void onRestart()&gt;">
+       <AccessPath Value="passwordText#7" Type="android.widget.TextView" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;android.widget.TextView: android.text.Editable content&gt;" Type="android.text.Editable"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="passwordText = (android.widget.EditText) passwordText#7" Method="&lt;de.ecspride.PrivateDateLeakage: void onRestart()&gt;">
+       <AccessPath Value="passwordText" Type="android.widget.EditText" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;android.widget.TextView: android.text.Editable content&gt;" Type="android.text.Editable"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="$u-1 = virtualinvoke passwordText.&lt;android.widget.EditText: android.text.Editable getText()&gt;()" Method="&lt;de.ecspride.PrivateDateLeakage: void onRestart()&gt;">
+       <AccessPath Value="$u-1" Type="android.text.Editable" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="pwd = interfaceinvoke $u-1.&lt;android.text.Editable: java.lang.String toString()&gt;()" Method="&lt;de.ecspride.PrivateDateLeakage: void onRestart()&gt;">
+       <AccessPath Value="pwd" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="specialinvoke $r0.&lt;de.ecspride.data.User: void &lt;init&gt;(java.lang.String,java.lang.String)&gt;(uname, pwd)" Method="&lt;de.ecspride.PrivateDateLeakage: void onRestart()&gt;">
+       <AccessPath Value="password" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="specialinvoke $r0.&lt;de.ecspride.data.Password: void &lt;init&gt;(java.lang.String)&gt;(password)" Method="&lt;de.ecspride.data.User: void &lt;init&gt;(java.lang.String,java.lang.String)&gt;">
+       <AccessPath Value="password" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="this.&lt;de.ecspride.data.Password: java.lang.String password&gt; = password" Method="&lt;de.ecspride.data.Password: void &lt;init&gt;(java.lang.String)&gt;">
+       <AccessPath Value="this" Type="de.ecspride.data.Password" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="return" Method="&lt;de.ecspride.data.Password: void &lt;init&gt;(java.lang.String)&gt;">
+       <AccessPath Value="$r0" Type="de.ecspride.data.Password" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="this.&lt;de.ecspride.data.User: de.ecspride.data.Password pwd&gt; = $r0" Method="&lt;de.ecspride.data.User: void &lt;init&gt;(java.lang.String,java.lang.String)&gt;">
+       <AccessPath Value="this" Type="de.ecspride.data.User" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.data.User: de.ecspride.data.Password pwd&gt;" Type="de.ecspride.data.Password"/>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="return" Method="&lt;de.ecspride.data.User: void &lt;init&gt;(java.lang.String,java.lang.String)&gt;">
+       <AccessPath Value="$r0" Type="de.ecspride.data.User" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.data.User: de.ecspride.data.Password pwd&gt;" Type="de.ecspride.data.Password"/>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="this.&lt;de.ecspride.PrivateDateLeakage: de.ecspride.data.User user&gt; = $r0" Method="&lt;de.ecspride.PrivateDateLeakage: void onRestart()&gt;">
+       <AccessPath Value="this" Type="de.ecspride.PrivateDateLeakage" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.PrivateDateLeakage: de.ecspride.data.User user&gt;" Type="de.ecspride.data.User"/>
+         <Field Value="&lt;de.ecspride.data.User: de.ecspride.data.Password pwd&gt;" Type="de.ecspride.data.Password"/>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="return" Method="&lt;de.ecspride.PrivateDateLeakage: void onRestart()&gt;">
+       <AccessPath Value="$r0" Type="de.ecspride.PrivateDateLeakage" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.PrivateDateLeakage: de.ecspride.data.User user&gt;" Type="de.ecspride.data.User"/>
+         <Field Value="&lt;de.ecspride.data.User: de.ecspride.data.Password pwd&gt;" Type="de.ecspride.data.Password"/>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="virtualinvoke $r0.&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;($r2)" Method="&lt;dummyMainClass: android.app.Activity dummyMainMethod_de_ecspride_PrivateDateLeakage(android.content.Intent)&gt;">
+       <AccessPath Value="this" Type="de.ecspride.PrivateDateLeakage" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.PrivateDateLeakage: de.ecspride.data.User user&gt;" Type="de.ecspride.data.User"/>
+         <Field Value="&lt;de.ecspride.data.User: de.ecspride.data.Password pwd&gt;" Type="de.ecspride.data.Password"/>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="password = specialinvoke this.&lt;de.ecspride.PrivateDateLeakage: java.lang.String getPassword()&gt;()" Method="&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;">
+       <AccessPath Value="this" Type="de.ecspride.PrivateDateLeakage" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.PrivateDateLeakage: de.ecspride.data.User user&gt;" Type="de.ecspride.data.User"/>
+         <Field Value="&lt;de.ecspride.data.User: de.ecspride.data.Password pwd&gt;" Type="de.ecspride.data.Password"/>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="$u0 = this.&lt;de.ecspride.PrivateDateLeakage: de.ecspride.data.User user&gt;" Method="&lt;de.ecspride.PrivateDateLeakage: java.lang.String getPassword()&gt;">
+       <AccessPath Value="$u0" Type="de.ecspride.data.User" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.data.User: de.ecspride.data.Password pwd&gt;" Type="de.ecspride.data.Password"/>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="$u-1 = virtualinvoke $u0.&lt;de.ecspride.data.User: de.ecspride.data.Password getPwd()&gt;()" Method="&lt;de.ecspride.PrivateDateLeakage: java.lang.String getPassword()&gt;">
+       <AccessPath Value="this" Type="de.ecspride.data.User" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.data.User: de.ecspride.data.Password pwd&gt;" Type="de.ecspride.data.Password"/>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="ret0 = this.&lt;de.ecspride.data.User: de.ecspride.data.Password pwd&gt;" Method="&lt;de.ecspride.data.User: de.ecspride.data.Password getPwd()&gt;">
+       <AccessPath Value="ret0" Type="de.ecspride.data.Password" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="return ret0" Method="&lt;de.ecspride.data.User: de.ecspride.data.Password getPwd()&gt;">
+       <AccessPath Value="$u-1" Type="de.ecspride.data.Password" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="$u-1#5 = virtualinvoke $u-1.&lt;de.ecspride.data.Password: java.lang.String getPassword()&gt;()" Method="&lt;de.ecspride.PrivateDateLeakage: java.lang.String getPassword()&gt;">
+       <AccessPath Value="this" Type="de.ecspride.data.Password" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.data.Password: java.lang.String password&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="ret0 = this.&lt;de.ecspride.data.Password: java.lang.String password&gt;" Method="&lt;de.ecspride.data.Password: java.lang.String getPassword()&gt;">
+       <AccessPath Value="ret0" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="return ret0" Method="&lt;de.ecspride.data.Password: java.lang.String getPassword()&gt;">
+       <AccessPath Value="$u-1#5" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="return $u-1#5" Method="&lt;de.ecspride.PrivateDateLeakage: java.lang.String getPassword()&gt;">
+       <AccessPath Value="password" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="$u-1 = virtualinvoke password.&lt;java.lang.String: char[] toCharArray()&gt;()" Method="&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;">
+       <AccessPath Value="$u-1" Type="char[]" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="c = $u-1[$u1#7#2]" Method="&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;">
+       <AccessPath Value="c" Type="char" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="$u-1#13 = virtualinvoke $u-1#13.&lt;java.lang.StringBuilder: java.lang.StringBuilder append(char)&gt;(c)" Method="&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;">
+       <AccessPath Value="$u-1#13" Type="java.lang.StringBuilder" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="$u-1#13 = virtualinvoke $u-1#13.&lt;java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)&gt;(&quot;_&quot;)" Method="&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;">
+       <AccessPath Value="$u-1#13" Type="java.lang.StringBuilder" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="obfuscatedUsername#3#1 = virtualinvoke $u-1#13.&lt;java.lang.StringBuilder: java.lang.String toString()&gt;()" Method="&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;">
+       <AccessPath Value="obfuscatedUsername#3#1" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="$u-1#13 = virtualinvoke $u-1#13.&lt;java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)&gt;(obfuscatedUsername#3#1)" Method="&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;">
+       <AccessPath Value="$u-1#13" Type="java.lang.StringBuilder" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="message = virtualinvoke $u-1#13.&lt;java.lang.StringBuilder: java.lang.String toString()&gt;()" Method="&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;">
+       <AccessPath Value="message" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="virtualinvoke smsmanager.&lt;android.telephony.SmsManager: void sendTextMessage(java.lang.String,java.lang.String,java.lang.String,android.app.PendingIntent,android.app.PendingIntent)&gt;(&quot;+49 1234&quot;, null, message, null, null)" Method="&lt;de.ecspride.PrivateDateLeakage: void sendMessage(android.view.View)&gt;">
+       <AccessPath Value="message" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+     </TaintPath>
+    </Source>
+   </Sources>
+  </Result>
+ </Results>
+ <PerformanceData>
+  <PerformanceEntry Name="TotalRuntimeSeconds" Value="1"/>
+  <PerformanceEntry Name="MaxMemoryConsumption" Value="93"/>
+  <PerformanceEntry Name="SourceCount" Value="1"/>
+  <PerformanceEntry Name="SinkCount" Value="3"/>
+ </PerformanceData>
+</DataFlowResults>
