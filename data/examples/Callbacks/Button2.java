@@ -49,7 +49,7 @@ public class Button2 extends Activity {
 		    @Override
 		    public void onClick(View v) {
 		        imei = null;
-		        Log.i("TAG", "Button 2: " + imei); //sink, no leak
+		        Log.i("TAG", "Button 2: " + imei); //sink
 		    }
 		});
     }

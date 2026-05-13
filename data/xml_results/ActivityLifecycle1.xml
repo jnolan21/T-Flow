@@ -1,0 +1,96 @@
+<?xml version="1.0" ?>
+<DataFlowResults FileFormatVersion="102" TerminationState="Success">
+ <Results>
+  <Result>
+   <Sink Statement="virtualinvoke conn#3.&lt;java.net.HttpURLConnection: void connect()&gt;()" LineNumber="42" Method="&lt;de.ecspride.ActivityLifecycle1: void connect()&gt;" MethodSourceSinkDefinition="&lt;java.net.URLConnection: void connect()&gt;">
+    <AccessPath Value="conn#3" Type="java.net.HttpURLConnection" TaintSubFields="true">
+     <Fields>
+      <Field Value="&lt;java.net.URLConnection: java.net.URL url&gt;" Type="java.net.URL"/>
+      <Field Value="&lt;java.net.URL: java.lang.String host&gt;" Type="java.lang.String"/>
+     </Fields>
+    </AccessPath>
+   </Sink>
+   <Sources>
+    <Source Statement="imei = virtualinvoke telephonyManager#5.&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;()" LineNumber="22" Method="&lt;de.ecspride.ActivityLifecycle1: void onCreate(android.os.Bundle)&gt;" MethodSourceSinkDefinition="&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;">
+     <AccessPath Value="imei" Type="java.lang.String" TaintSubFields="true"/>
+     <TaintPath>
+      <PathElement Statement="imei = virtualinvoke telephonyManager#5.&lt;android.telephony.TelephonyManager: java.lang.String getDeviceId()&gt;()" Method="&lt;de.ecspride.ActivityLifecycle1: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="imei" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="imei = virtualinvoke $u2.&lt;java.lang.String: java.lang.String concat(java.lang.String)&gt;(imei)" Method="&lt;de.ecspride.ActivityLifecycle1: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath Value="imei" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="&lt;de.ecspride.ActivityLifecycle1: java.lang.String URL&gt; = imei" Method="&lt;de.ecspride.ActivityLifecycle1: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.ActivityLifecycle1: java.lang.String URL&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="return" Method="&lt;de.ecspride.ActivityLifecycle1: void onCreate(android.os.Bundle)&gt;">
+       <AccessPath TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.ActivityLifecycle1: java.lang.String URL&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="virtualinvoke $r0.&lt;de.ecspride.ActivityLifecycle1: void onStart()&gt;()" Method="&lt;dummyMainClass: android.app.Activity dummyMainMethod_de_ecspride_ActivityLifecycle1(android.content.Intent)&gt;">
+       <AccessPath TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.ActivityLifecycle1: java.lang.String URL&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="specialinvoke this.&lt;de.ecspride.ActivityLifecycle1: void connect()&gt;()" Method="&lt;de.ecspride.ActivityLifecycle1: void onStart()&gt;">
+       <AccessPath TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;de.ecspride.ActivityLifecycle1: java.lang.String URL&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="$u2 = &lt;de.ecspride.ActivityLifecycle1: java.lang.String URL&gt;" Method="&lt;de.ecspride.ActivityLifecycle1: void connect()&gt;">
+       <AccessPath Value="$u2" Type="java.lang.String" TaintSubFields="true"/>
+      </PathElement>
+      <PathElement Statement="specialinvoke url.&lt;java.net.URL: void &lt;init&gt;(java.lang.String)&gt;($u2)" Method="&lt;de.ecspride.ActivityLifecycle1: void connect()&gt;">
+       <AccessPath Value="url" Type="java.net.URL" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;java.net.URL: java.lang.String host&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="conn = virtualinvoke url.&lt;java.net.URL: java.net.URLConnection openConnection()&gt;()" Method="&lt;de.ecspride.ActivityLifecycle1: void connect()&gt;">
+       <AccessPath Value="conn" Type="java.net.URLConnection" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;java.net.URLConnection: java.net.URL url&gt;" Type="java.net.URL"/>
+         <Field Value="&lt;java.net.URL: java.lang.String host&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="conn#3 = (java.net.HttpURLConnection) conn" Method="&lt;de.ecspride.ActivityLifecycle1: void connect()&gt;">
+       <AccessPath Value="conn#3" Type="java.net.HttpURLConnection" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;java.net.URLConnection: java.net.URL url&gt;" Type="java.net.URL"/>
+         <Field Value="&lt;java.net.URL: java.lang.String host&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+      <PathElement Statement="virtualinvoke conn#3.&lt;java.net.HttpURLConnection: void connect()&gt;()" Method="&lt;de.ecspride.ActivityLifecycle1: void connect()&gt;">
+       <AccessPath Value="conn#3" Type="java.net.HttpURLConnection" TaintSubFields="true">
+        <Fields>
+         <Field Value="&lt;java.net.URLConnection: java.net.URL url&gt;" Type="java.net.URL"/>
+         <Field Value="&lt;java.net.URL: java.lang.String host&gt;" Type="java.lang.String"/>
+        </Fields>
+       </AccessPath>
+      </PathElement>
+     </TaintPath>
+    </Source>
+   </Sources>
+  </Result>
+ </Results>
+ <PerformanceData>
+  <PerformanceEntry Name="TotalRuntimeSeconds" Value="1"/>
+  <PerformanceEntry Name="MaxMemoryConsumption" Value="93"/>
+  <PerformanceEntry Name="SourceCount" Value="1"/>
+  <PerformanceEntry Name="SinkCount" Value="1"/>
+ </PerformanceData>
+</DataFlowResults>
