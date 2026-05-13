@@ -248,7 +248,7 @@ def reconstruct_semantic(stmt: str, var_map: dict) -> str:
         # Return either <instance>.<method> or <class>.method depending on invoke type
         instance_invoke = re.search(r'virtualinvoke\s+([^.]+)\.', stmt)
         if instance_invoke:
-            instance = instance_invoke.group(1)
+            instance = instance_invoke.group(1).split("#")[0]
             return f"{instance}.{method}({", ".join(args_resolved)})"
         
         return f"{class_name}.{method}({", ".join(args_resolved)})"
