@@ -27,7 +27,7 @@ def get_available_graphs():
     return sorted(graph_options)
 
 
-# Make a JS-safe ID (some of these markers will trigger weird behavior - I found out while tryint to use "toString" as a node name)
+# Make a JS-safe ID (some of these markers will trigger weird behavior - I found out while trying to use "toString" as a node name)
 def safe_id(node_id):
     if not node_id:
         return None
@@ -45,7 +45,7 @@ def safe_id(node_id):
 # Initialize app
 app = Dash(__name__)
 
-# App styling! (global css animation)
+# App styling and Javascript script for the "Expand"/"Exit" button! (global css animation)
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -93,6 +93,76 @@ app.index_string = '''
 
         </style>
 
+        // This is our main script to handle the "Expand" and "Exit" features for our graph! :)
+        <script>
+            // Use event delegation on the document so we catch the click even after Dash/React re-renders the button
+            let isFullscreen = false;
+
+            document.addEventListener('click', function(e) {
+                // Only fire if the clicked element is our expand button
+                if (!e.target || e.target.id !== 'fullscreen-btn') return;
+
+                const graphPanel = document.getElementById('graph-panel');
+                const rightPanel = document.getElementById('right-panel');
+                const header     = document.getElementById('header-section');
+                const desc       = document.getElementById('desc-section');
+
+                isFullscreen = !isFullscreen;
+
+                if (isFullscreen) {
+                    // Expand the graph to fill the screen
+                    e.target.innerText            = 'Exit';
+                    graphPanel.style.position     = 'fixed';
+                    graphPanel.style.top          = '0';
+                    graphPanel.style.left         = '0';
+                    graphPanel.style.width        = '100vw';
+                    graphPanel.style.height       = '100vh';
+                    graphPanel.style.zIndex       = '9999';
+                    graphPanel.style.borderRadius = '0';
+                    if (rightPanel) rightPanel.style.display = 'none';
+                    if (header)     header.style.display     = 'none';
+                    if (desc)       desc.style.display       = 'none';
+                } else {
+                    // Collapse the graph back to it's normal size
+                    e.target.innerText            = 'Expand Graph';
+                    graphPanel.style.position     = '';
+                    graphPanel.style.top          = '';
+                    graphPanel.style.left         = '';
+                    graphPanel.style.width        = '';
+                    graphPanel.style.height       = '';
+                    graphPanel.style.zIndex       = '';
+                    graphPanel.style.borderRadius = '10px';
+                    if (rightPanel) rightPanel.style.display = '';
+                    if (header)     header.style.display     = '';
+                    if (desc)       desc.style.display       = '';
+                }
+
+                // After the resize, find the Cytoscape instance on the DOM element and call resize() + fit() directly so nodes reflow to the new container size and look nice!
+                setTimeout(function() {
+                    // Dash Cytoscape attaches the cy instance to the container div's _cyreg property
+                    const cyDiv = document.getElementById('taint-graph');
+                    if (!cyDiv) return;
+
+                    // Walk through all of the child elements to find the one with the cy instance attached
+                    const findCy = (el) => {
+                        if (el._cyreg && el._cyreg.cy) return el._cyreg.cy;
+                        for (let child of el.children) {
+                            const found = findCy(child);
+                            if (found) return found;
+                        }
+                        return null;
+                    };
+
+                    const cy = findCy(cyDiv);
+                    // If the cyDiv has been found, the resize and fit it!
+                    if (cy) {
+                        cy.resize();  // Just means to tell Cytoscape the containers changed size
+                        cy.fit();     // Re-center and scale all elements to fill it
+                    }
+                }, 200);
+            });
+        </script>
+
     </head>
     <body>
         {%app_entry%}
@@ -122,12 +192,12 @@ app.layout = html.Div([
                     "letterSpacing": "4px",
                     "textShadow": "0 0 20px rgba(56,189,248,0.6)",
                     "animation": "floatGlow 4s ease-in-out infinite"
-                }
+                },
             ),
 
             html.Div("Interactive visualization of how data moves through programs",
                      style={"color": "#94A3B8"})
-        ], style={"marginBottom": "12px"}),
+        ], style={"marginBottom": "12px"}, id="header-section"),
 
         # Description of our app
         html.Div([
@@ -153,7 +223,7 @@ app.layout = html.Div([
             "border": "1px solid rgba(56,189,248,0.2)",
             "borderRadius": "8px",
             "background": "rgba(2,6,23,0.4)"
-        }),
+        }, id="desc-section"),
 
         # MAIN CONTENT
         html.Div([
@@ -224,12 +294,31 @@ app.layout = html.Div([
                     "alignItems": "center"
                 }),
 
-                html.H3("Flow Map", style={"color": "#E0F2FE"}),
-                html.P(
-                    "Nodes represent program elements (sources, variables, functions, sinks). "
-                    "Edges represent how data flows between them.",
-                    style={"color": "#94A3B8", "fontSize": "11px", "marginTop": "2px", "marginBottom": "10px"}
-                ),
+                # Fullscreen toggle button
+                html.Div([
+                    html.H3("Flow Map", style={"color": "#E0F2FE", "margin": 0}),
+                    html.Button(
+                        "Expand Graph",
+                        id="fullscreen-btn",
+                        style={
+                            "backgroundColor": "transparent",
+                            "color": "#38BDF8",
+                            "border": "1px solid #38BDF8",
+                            "padding": "3px 10px",
+                            "fontSize": "11px",
+                            "cursor": "pointer",
+                            "borderRadius": "4px",
+                            "letterSpacing": "1px"
+                        }
+                    )
+                ], style={
+                    "padding": "10px",
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center"
+                }),
+
+
 
                 cyto.Cytoscape(
                     id="taint-graph",
@@ -323,7 +412,7 @@ app.layout = html.Div([
                 "border": "1px solid rgba(56,189,248,0.15)",
                 "borderRadius": "10px",
                 "boxShadow": "0 0 30px rgba(56,189,248,0.08)"
-                }
+                }, id="graph-panel"
             ),
 
             # RIGHT PANEL
@@ -361,7 +450,7 @@ app.layout = html.Div([
                     "border": "1px solid rgba(249,115,22,0.12)",
                     "borderRadius": "10px",
                     "boxShadow": "0 0 30px rgba(249,115,22,0.05)"
-                }
+                }, id="right-panel"
             )
 
         ], style={
@@ -475,68 +564,6 @@ def display_graph_stats(graph_data):
         html.P(f"Sources: {num_sources}"),
         html.P(f"Sinks: {num_sinks}")
     ])
-
-# Dynamically load the available graphs to display in the dropdown for the user to view
-"""
-@app.callback(
-    Output("graph-selector", "options"),
-    Output("graph-selector", "value"),
-    Input("url", "pathname")
-)
-def refresh_graph_dropdown(_):
-    graphs = get_available_graphs()
-
-    options = [
-        {"label": name, "value": name}
-        for name in graphs
-    ]
-
-    value = graphs[0] if graphs else None
-
-    return options, value
-
-# Delete the selected graph
-@app.callback(
-    Output("graph-selector", "options"),
-    Output("graph-selector", "value"),
-    Output("graph-data-store", "data", allow_duplicate=True),
-    Input("delete-graph-btn", "n_clicks"),
-    State("graph-selector", "value"),
-    prevent_initial_call=True
-)
-def delete_graph(n_clicks, selected_name):
-    if not selected_name:
-        graphs = get_available_graphs()
-        return (
-            [{"label": g, "value": g} for g in graphs],
-            None,
-            None
-        )
-    try:
-        graph_file = GRAPH_DIR / f"{selected_name}_graph.json"
-        if graph_file.exists():
-            graph_file.unlink()  # Delete the graph file (i.e. ArrayToString1_graph.json)
-
-        print(f"[DELETE] Removed graph: {graph_file}")
-
-        # Refresh the dropdown list of graphs
-        graphs = get_available_graphs()
-        options = [{"label": g, "value": g} for g in graphs]
-
-        # Pick a new default if available
-        new_value = graphs[0] if graphs else None
-        return options, new_value, None
-
-    except Exception as e:
-        print("[DELETE ERROR]", e)
-        graphs = get_available_graphs()
-        return (
-            [{"label": name, "value": name} for name in graphs],
-            None,
-            None
-        )
-
-"""
     
 
 # Load JSON graph into Store based on which graph the user selects
@@ -595,7 +622,7 @@ def manage_graphs(pathname, delete_clicks, upload_contents,
         trigger = ctx.triggered[0]["prop_id"].split(".")[0]
 
     # -------------------------
-    # INITIAL PAGE LOAD
+    # INITIAL PAGE LOAD (load the top graph)
     # -------------------------
     if trigger in ["url", "initial"]:
         graphs = get_available_graphs()
@@ -606,7 +633,7 @@ def manage_graphs(pathname, delete_clicks, upload_contents,
         return options, value, "Ready."
 
     # -------------------------
-    # DELETE GRAPH
+    # DELETE GRAPH (remove the graph JSON so it doesn't load with the "available graphs")
     # -------------------------
     elif trigger == "delete-graph-btn":
 
@@ -624,7 +651,7 @@ def manage_graphs(pathname, delete_clicks, upload_contents,
         return options, value, f"Deleted graph: {selected_graph}"
 
     # -------------------------
-    # UPLOAD APK
+    # UPLOAD APK (have FlowDroid run on .apk and do full pipeline)
     # -------------------------
     elif trigger == "upload-apk":
 
@@ -659,11 +686,8 @@ def manage_graphs(pathname, delete_clicks, upload_contents,
             output_dir.mkdir(parents=True, exist_ok=True)
 
             graph_output = output_dir / f"{apk_name}_graph.json"
-
             export_json(G, graph_output)
-
             graphs = get_available_graphs()
-
             options = [{"label": g, "value": g} for g in graphs]
 
             return (
@@ -673,11 +697,8 @@ def manage_graphs(pathname, delete_clicks, upload_contents,
             )
 
         except Exception as e:
-
             graphs = get_available_graphs()
-
             options = [{"label": g, "value": g} for g in graphs]
-
             return (
                 options,
                 selected_graph,
@@ -722,7 +743,7 @@ def build_elements(graph_data, selected_node, simplify_mode):
             if node.get("type") == "sink":
                 sinks.add(sid)
 
-        # Find all source → sink reachability
+        # Find all source -> sink reachability (i.e. nodes you can get to from the current one)
         new_edges = set()
 
         for src in sources:
