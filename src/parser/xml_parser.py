@@ -235,11 +235,14 @@ def reconstruct_semantic(stmt: str, var_map: dict) -> str:
             """Helper for loop below"""
             try:
                 float(s)
-                return True
+                # Account for things like "+49"
+                return s.lstrip('+-').replace('.','',1).isdigit()
             except ValueError:
                 return False
         for i, arg in enumerate(args_resolved):
-            if not is_number(arg) and arg not in var_map:
+            if arg == "null":
+                pass # Keep all nulls unquoted
+            elif not is_number(arg) and arg not in var_map:
                 args_resolved[i] = f'"{arg}"'
 
         # Return either <instance>.<method> or <class>.method depending on invoke type
@@ -498,8 +501,8 @@ def handle_access_stmt(stmt: str, ap: dict, var_map: dict):
         var_map[ap["Value"]] = var_map[variable]
 
 def normalize_label(label: str) -> str:
-    """Remove parentheses from labels containing 'null' to treat them as string literals."""
-    if "null" in label:
+    """Treat standalone 'null' assignments as literals (no parens needed). Do NOT strip parens from method calls that merely contain null as an argument."""
+    if re.match(r'^\s*\S+\s*=\s*null\s*$', label):
         label = label.replace("(", "").replace(")", "")
     return label
 
